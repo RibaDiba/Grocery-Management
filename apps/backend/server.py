@@ -1,18 +1,19 @@
 import time
 from pathlib import Path
 from typing import Any
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, HTTPException, UploadFile, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from config import config
 from ocr import ocr_image, check_tesseract_available
 from receipt_parser import ReceiptParser
+from auth import router as auth_router, get_current_user, User
+from groceries import router as groceries_router
 
 
-app = FastAPI(
-    title="grocery-backend"
-)
-
+app = FastAPI(title="grocery-backend")
+app.include_router(auth_router)
+app.include_router(groceries_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -21,9 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 receipt_parser = ReceiptParser()
-
 
 @app.on_event("startup")
 async def startup_event():
@@ -66,7 +65,7 @@ async def health_check():
 
 
 @app.post("/api/receipt/upload")
-async def upload_receipt(file: UploadFile = File(...)) -> JSONResponse:
+async def upload_receipt(file: UploadFile = File(...), current_user: User = Depends(get_current_user)) -> JSONResponse:
     start_time = time.time()
     try:
         validate_file(file)
@@ -90,6 +89,31 @@ async def upload_receipt(file: UploadFile = File(...)) -> JSONResponse:
                 status_code=500,
                 detail=f"Receipt parsing failed: {str(e)}"
             )
+
+        # Persist extracted items to groceries collection (best-effort)
+        try:
+            from datetime import datetime, timezone
+            from bson import ObjectId
+            from database import get_groceries_collection
+            col = get_groceries_collection()
+            user_oid = ObjectId(current_user.id)
+            docs = []
+            now = datetime.now(timezone.utc)
+            for i in items:
+                if isinstance(i, dict) and "name" in i:
+                    docs.append({
+                        "user_id": user_oid,
+                        "name": str(i.get("name")),
+                        # Without model, we can't infer perish range; leave None
+                        "perish_min_days": None,
+                        "perish_max_days": None,
+                        "created_at": now,
+                    })
+            if docs:
+                col.insert_many(docs)
+        except Exception:
+            # Don't fail the request if persistence fails; just continue and return OCR result
+            pass
 
         processing_time_ms = int((time.time() - start_time) * 1000)
 

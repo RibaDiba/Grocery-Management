@@ -1,0 +1,151 @@
+import time
+from pathlib import Path
+from typing import Any
+from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from config import config
+from ocr import ocr_image, check_tesseract_available
+from receipt_parser import ReceiptParser
+
+
+app = FastAPI(
+    title="grocery-backend"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], 
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+receipt_parser = ReceiptParser()
+
+
+@app.on_event("startup")
+async def startup_event():
+    errors = config.validate()
+    if errors:
+        print("Configuration errors:")
+        for error in errors:
+            print(f"  - {error}")
+        raise RuntimeError("Invalid configuration.")
+
+    if not check_tesseract_available():
+        raise RuntimeError(
+            "Install Tesseract OCR before running"
+        )
+    config.ensure_upload_dir()
+    
+    print("API started successfully")
+
+
+@app.get("/")
+async def root():
+    return {
+        "name": "grocery-backend",
+        "version": "1.0.0",
+        "endpoints": {
+            "upload": "/api/receipt/upload",
+            "health": "/health",
+            "docs": "/docs"
+        }
+    }
+
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    return {
+        "status": "healthy",
+        "tesseract_available": check_tesseract_available()
+    }
+
+
+@app.post("/api/receipt/upload")
+async def upload_receipt(file: UploadFile = File(...)) -> JSONResponse:
+    start_time = time.time()
+    try:
+        validate_file(file)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    file_path = None
+    try:
+        file_path = save_upload_file(file)
+        try:
+            ocr_text = ocr_image(file_path, preprocess=config.OCR_PREPROCESS_METHOD)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"OCR processing failed: {str(e)}"
+            )
+
+        try:
+            items = receipt_parser.parse_receipt_text(ocr_text)
+        except Exception as e:
+            raise HTTPException(
+                status_code=500,
+                detail=f"Receipt parsing failed: {str(e)}"
+            )
+
+        processing_time_ms = int((time.time() - start_time) * 1000)
+
+        response_data = {
+            "success": True,
+            "items": items,
+            "total_items": len(items),
+            "raw_text": ocr_text,
+            "processing_time_ms": processing_time_ms
+        }
+        
+        return JSONResponse(content=response_data)
+        
+    finally:
+        if file_path and file_path.exists():
+            try:
+                file_path.unlink()
+            except Exception:
+                pass 
+
+
+def validate_file(file: UploadFile) -> None:
+    if not file.filename:
+        raise ValueError("No filename provided")
+
+    file_ext = Path(file.filename).suffix.lower().lstrip(".")
+    if file_ext not in config.ALLOWED_EXTENSIONS:
+        raise ValueError(
+            f"Invalid file type. Allowed: {', '.join(config.ALLOWED_EXTENSIONS)}"
+        )
+    
+    if file.size and file.size > config.MAX_FILE_SIZE_BYTES:
+        raise ValueError(
+            f"File too large. Maximum size: {config.MAX_FILE_SIZE_MB}MB"
+        )
+
+
+def save_upload_file(file: UploadFile) -> Path:
+    timestamp = int(time.time() * 1000)
+    file_ext = Path(file.filename).suffix
+    filename = f"receipt_{timestamp}{file_ext}"
+    file_path = config.UPLOAD_DIR / filename
+
+    with open(file_path, "wb") as f:
+        content = file.file.read()
+        f.write(content)
+    
+    return file_path
+
+
+if __name__ == "__main__":
+    import uvicorn
+    
+    uvicorn.run(
+        "api:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
+    )

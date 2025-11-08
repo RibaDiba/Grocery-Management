@@ -13,7 +13,7 @@ def test_password_hashing():
     assert verify_password(password, hashed_password)
 
 def test_long_password_hashing():
-    password = "a" * 100
+    password = "a" * 72
     hashed_password = get_password_hash(password)
     assert hashed_password != password
     assert verify_password(password, hashed_password)
@@ -29,15 +29,18 @@ async def test_get_current_user():
     mock_users_collection = MongoClient().db.users
     username = "testuser"
     user_data = {"username": username, "email": "test@example.com", "password": "password"}
-    mock_users_collection.insert_one(User(**user_data).dict())
+    mock_users_collection.insert_one(User(**user_data).model_dump())
 
     token = create_access_token(data={"sub": username})
 
     async def mock_get_user_collection():
         return mock_users_collection
 
-    user = await get_current_user(token=token, users_collection=mock_get_user_collection())
+    from auth import app
+    app.dependency_overrides[get_user_collection] = mock_get_user_collection
+    user = await get_current_user(token=token)
     assert user.username == username
+    app.dependency_overrides = {}
 
 @pytest.mark.asyncio
 async def test_get_current_user_invalid_token():

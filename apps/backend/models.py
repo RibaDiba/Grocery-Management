@@ -1,3 +1,4 @@
+from typing import List
 from pydantic import BaseModel, EmailStr, Field
 
 class User(BaseModel):
@@ -7,3 +8,9 @@ class User(BaseModel):
 
 class UserInDB(User):
     hashed_password: str
+
+class Receipt(BaseModel):
+    user_id: str
+    file_path: str
+    raw_text: str
+    grocery_items: List[str] = []

@@ -160,7 +160,7 @@ class ReceiptParser:
 
         """
 
-    def add_groceries_to_db(self, items: list[dict[str, Any]]):
+    def add_groceries_to_db(self, items: list[dict[str, Any]]) -> list[str]:
         from datetime import datetime, timezone
         from bson import ObjectId
         from database import get_groceries_collection
@@ -177,8 +177,11 @@ class ReceiptParser:
                     "max_days": i.get("max_days"),
                     "created_at": now,
                 })
-        if docs:
-            col.insert_many(docs)
+        if not docs:
+            return []
+        
+        result = col.insert_many(docs)
+        return [str(id) for id in result.inserted_ids]
 
     def _parse_response(self, response_text: str) -> list[dict[str, Any]]:
         json_match = re.search(r"\[.*\]", response_text, re.DOTALL)

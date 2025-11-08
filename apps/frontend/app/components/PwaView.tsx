@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SignIn from './SignIn';
 import SignUp from './SignUp';
+import ReceiptsList from './ReceiptsList';
 
 interface GroceryItem {
   id: number;
@@ -118,6 +119,8 @@ export default function PwaView() {
             ))}
           </AnimatePresence>
         </ul>
+
+        <ReceiptsList />
       </main>
     </div>
   );

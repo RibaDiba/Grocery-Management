@@ -15,8 +15,9 @@ export default function Home() {
         return 'pwa';
       }
 
-      const userAgent = navigator.userAgent;
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      // Use screen size instead of device detection
+      // Mobile view for screens smaller than 768px (typical tablet/mobile breakpoint)
+      const isMobile = window.innerWidth < 768;
 
       if (isMobile) {
         return 'mobile';
@@ -25,8 +26,22 @@ export default function Home() {
       }
     };
 
+    // Set initial view
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setView(determineView());
+
+    // Listen for window resize to update view dynamically
+    const handleResize = () => {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setView(determineView());
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    // Cleanup listener on unmount
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   if (view === 'loading') {

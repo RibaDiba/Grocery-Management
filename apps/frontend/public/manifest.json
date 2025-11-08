@@ -1,0 +1,39 @@
+{
+  "name": "Grocery Management",
+  "short_name": "GroceryApp",
+  "description": "A simple grocery management app.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "window.svg",
+      "sizes": "48x48 72x72 96x96 128x128 256x256 512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "file.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "App Screenshot 1"
+    },
+    {
+      "src": "globe.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "App Screenshot 2"
+    },
+    {
+      "src": "window.svg",
+      "sizes": "1280x720",
+      "type": "image/svg+xml",
+      "form_factor": "wide",
+      "label": "App Screenshot 3"
+    }
+  ]
+}

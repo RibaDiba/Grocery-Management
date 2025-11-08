@@ -13,8 +13,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Grocery Management",
-  description: "A simple grocery management app.",
+  title: "PantryPilot",
+  description: "A simple pantry management app.",
   manifest: "/manifest.json",
 };
 

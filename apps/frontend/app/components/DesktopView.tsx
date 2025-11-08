@@ -9,7 +9,7 @@ const DesktopView = () => {
         <div className="flex flex-col lg:flex-row items-center gap-10">
           {/* --- Content Column --- */}
           <div className="w-full lg:w-1/2 flex flex-col items-center justify-center">
-            <h1 className="text-5xl font-bold mb-2">Grocery Management</h1>
+            <h1 className="text-5xl font-bold mb-2">PantryPilot</h1>
             <p className="text-xl text-white/90 mb-6">Desktop View</p>
             <p className="text-lg text-white/80">Sign in on your mobile device or PWA to get started.</p>
           </div>

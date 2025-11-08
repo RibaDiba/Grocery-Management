@@ -17,7 +17,7 @@ interface UploadResponse {
   processing_time_ms: number;
 }
 
-export default function ReceiptsList() {
+export default function ReceiptsList({ userId }: { userId: string | null }) {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +29,8 @@ export default function ReceiptsList() {
     const fetchReceipts = async () => {
       const token = localStorage.getItem('access_token');
       
-      if (!token) {
-        setError('No access token found. Please sign in again.');
+      if (!token || !userId) { // Added check for userId
+        setError('No access token or user ID found. Please sign in again.');
         setLoading(false);
         return;
       }
@@ -78,7 +78,7 @@ export default function ReceiptsList() {
     };
 
     fetchReceipts();
-  }, []);
+  }, [userId]); // Added userId to dependency array
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -174,7 +174,7 @@ export default function ReceiptsList() {
   if (loading) {
     return (
       <div className="mt-8 w-full">
-        <p className="text-black dark:text-zinc-50">Loading receipts...</p>
+        <p className="text-gray-700">Loading receipts...</p>
       </div>
     );
   }
@@ -190,14 +190,14 @@ export default function ReceiptsList() {
   return (
     <div className="mt-8 w-full">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-semibold text-black dark:text-zinc-50">
+        <h2 className="text-2xl font-semibold text-green-800">
           Receipts ({receipts.length})
         </h2>
       </div>
 
       {/* Upload Section */}
-      <div className="mb-6 p-4 rounded-lg bg-zinc-100 dark:bg-zinc-900">
-        <label className="block mb-2 text-sm font-medium text-black dark:text-zinc-50">
+      <div className="mb-6 p-4 rounded-lg bg-green-50 border border-green-200">
+        <label className="block mb-2 text-sm font-medium text-green-800">
           Upload Receipt
         </label>
         <input
@@ -206,16 +206,16 @@ export default function ReceiptsList() {
           accept=".jpg,.jpeg,.png,.pdf"
           onChange={handleFileUpload}
           disabled={uploading}
-          className="block w-full text-sm text-black dark:text-zinc-50
+          className="block w-full text-sm text-gray-800
             file:mr-4 file:py-2 file:px-4
             file:rounded-full file:border-0
             file:text-sm file:font-semibold
-            file:bg-green-500 file:text-white
-            hover:file:bg-green-600
+            file:bg-green-600 file:text-white
+            hover:file:bg-green-700
             disabled:opacity-50 disabled:cursor-not-allowed"
         />
         {uploading && (
-          <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="mt-2 text-sm text-gray-600">
             Uploading and processing receipt...
           </p>
         )}
@@ -224,36 +224,11 @@ export default function ReceiptsList() {
             {uploadError}
           </p>
         )}
-        <p className="mt-2 text-xs text-zinc-500 dark:text-zinc-400">
+        <p className="mt-2 text-xs text-gray-600">
           Supported formats: JPG, PNG, PDF (Max 10MB)
         </p>
       </div>
-      {receipts.length === 0 ? (
-        <p className="text-zinc-500 dark:text-zinc-400">No receipts found.</p>
-      ) : (
-        <div className="space-y-4">
-          {receipts.map((receipt, index) => (
-            <div
-              key={index}
-              className="rounded-lg bg-zinc-100 p-4 dark:bg-zinc-900"
-            >
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">
-                File: {receipt.file_path}
-              </p>
-              <p className="text-sm text-zinc-500 dark:text-zinc-400 mb-2">
-                Grocery Items: {receipt.grocery_items.length}
-              </p>
-              {receipt.grocery_items.length > 0 && (
-                <ul className="list-disc list-inside text-sm text-black dark:text-zinc-50">
-                  {receipt.grocery_items.map((item, itemIndex) => (
-                    <li key={itemIndex}>{item}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+  
     </div>
   );
 }

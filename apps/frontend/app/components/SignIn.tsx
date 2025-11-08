@@ -1,6 +1,25 @@
 import React, { useState } from 'react';
 
-const SignIn = ({ onSignIn }: { onSignIn: () => void }) => {
+// Helper function to decode JWT token and extract user_id
+const decodeJWT = (token: string): string | null => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    return payload.sub || null; // 'sub' contains the user_id
+  } catch (error) {
+    console.error('Error decoding JWT:', error);
+    return null;
+  }
+};
+
+const SignIn = ({ onSignIn }: { onSignIn: (accessToken: string, userId: string) => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -25,8 +44,18 @@ const SignIn = ({ onSignIn }: { onSignIn: () => void }) => {
 
       if (response.ok) {
         const data = await response.json();
-        localStorage.setItem('access_token', data.access_token); // Store the token
-        onSignIn(); // Call the parent's onSignIn to change view or navigate
+        const token = data.access_token;
+        
+        // Decode JWT to get user_id from the token
+        const userId = decodeJWT(token);
+        
+        // Store token and user_id in localStorage for persistence
+        localStorage.setItem('access_token', token);
+        if (userId) {
+          localStorage.setItem('user_id', userId);
+        }
+        
+        onSignIn(token, userId || ''); // Pass token and user_id to parent
       } else {
         const errorData = await response.json();
         setError(typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData) || 'Login failed.');

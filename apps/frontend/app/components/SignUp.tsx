@@ -1,6 +1,25 @@
 import React, { useState } from 'react';
 
-const SignUp = ({ onSignUp }: { onSignUp: () => void }) => {
+// Helper function to decode JWT token and extract user_id
+const decodeJWT = (token: string): string | null => {
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    const payload = JSON.parse(jsonPayload);
+    return payload.sub || null; // 'sub' contains the user_id
+  } catch (error) {
+    console.error('Error decoding JWT:', error);
+    return null;
+  }
+};
+
+const SignUp = ({ onSignUp }: { onSignUp: (accessToken: string, userId: string) => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -29,8 +48,38 @@ const SignUp = ({ onSignUp }: { onSignUp: () => void }) => {
       });
 
       if (response.ok) {
-        // Registration successful
-        onSignUp(); // Call the parent's onSignUp to change view or navigate
+        // After successful registration, automatically log the user in
+        try {
+          const loginResponse = await fetch('http://localhost:8000/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
+          });
+
+          if (loginResponse.ok) {
+            const loginData = await loginResponse.json();
+            const token = loginData.access_token;
+            
+            // Decode JWT to get user_id
+            const userId = decodeJWT(token);
+            
+            // Store token and user_id in localStorage for persistence
+            localStorage.setItem('access_token', token);
+            if (userId) {
+              localStorage.setItem('user_id', userId);
+            }
+            
+            onSignUp(token, userId || ''); // Pass token and user_id to parent
+          } else {
+            // Registration successful but auto-login failed, just proceed
+            onSignUp('', '');
+          }
+        } catch (err) {
+          // Auto-login failed, but registration was successful
+          onSignUp('', '');
+        }
       } else {
         const errorData = await response.json();
         setError(typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData) || 'Registration failed.');

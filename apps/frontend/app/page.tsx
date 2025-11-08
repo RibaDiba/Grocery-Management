@@ -5,28 +5,27 @@ import DesktopView from './components/DesktopView';
 import MobileView from './components/MobileView';
 import PwaView from './components/PwaView';
 
-const determineView = () => {
-  if (typeof window === 'undefined') {
-    return 'loading';
-  }
-  const isPWA = window.matchMedia('(display-mode: standalone)').matches;
-  if (isPWA) {
-    return 'pwa';
-  }
-
-  const isMobile = window.innerWidth < 768;
-
-  if (isMobile) {
-    return 'mobile';
-  } else {
-    return 'desktop';
-  }
-};
-
 export default function Home() {
-  const [view, setView] = useState<'loading' | 'desktop' | 'mobile' | 'pwa'>(determineView());
+  const [view, setView] = useState<'loading' | 'desktop' | 'mobile' | 'pwa'>('loading');
 
   useEffect(() => {
+    const determineView = () => {
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+      if (isPWA) {
+        return 'pwa';
+      }
+
+      const isMobile = window.innerWidth < 768;
+
+      if (isMobile) {
+        return 'mobile';
+      } else {
+        return 'desktop';
+      }
+    };
+
+    setView(determineView());
+
     const handleResize = () => {
       setView(determineView());
     };

@@ -67,29 +67,69 @@ class ReceiptParser:
 
     def _build_prompt(self, ocr_text: str) -> str:
         return f"""SYSTEM_ROLE:
-                You are an expert receipt parser. Your sole function is to extract perishable food items and estimate their freshness duration.
+    You are an expert receipt parser and food data normalizer. Your role is to extract all expirable food items from a store receipt and estimate their typical freshness duration.
 
-                TASK:
-                Analyze the provided receipt text. Identify the purchase date to use as a reference. Then, extract all perishable food items and provide an estimated shelf life for each, relative to that purchase date.
+TASK:
+    Analyze the provided receipt text. Identify the purchase date to use as a reference. Then, extract all items that are perishable or have an actual expiration or “best by” date (i.e., any consumable product that spoils or loses freshness within 100 days of purchase). For each item, normalize its name to the simplest, most general form—but retain adjectives only if they meaningfully affect freshness duration—and provide an estimated shelf life in days.
 
-                OUTPUT_FORMAT:
-                You MUST return *only* a valid JSON array of objects.
-                Each object must contain two keys:
-                1.  `name`: (string) The name of the perishable item.
-                2.  `expiration_range`: (string) A string representing the typical duration of freshness from the purchase date in days (e.g., "3-5", "7-10").
+OUTPUT_FORMAT:
+    You MUST return *only* a valid JSON array of objects.
+    Each object must contain two keys:
+    1. `name`: (string) The simplified, generic name of the food item (e.g., "Milk", "Cheese", "Apple", "Chicken", "Frozen Chicken").
+    2. `expiration_range`: (string) A range representing the typical number of days the item remains fresh after purchase (e.g., "3-5", "7-10", "30-60").
 
-                IMPORTANT_RULES:
-                1.  **Find Purchase Date:** First, silently identify the purchase date from the receipt. This date is your "day zero" for all estimations. Do NOT include this date in the output.
-                2.  **Filter Perishables:** Scan all purchased items. You must *only* extract items that are clearly perishable (e.g., milk, fresh meat, produce, dairy, fresh bakery items).
-                3.  **Ignore Non-Items:** Explicitly ignore all non-perishable goods (e.g., canned soup, dry pasta, paper towels, soap) and all receipt metadata (store name, address, subtotals, taxes, payment methods, etc.).
-                4.  **Handle Duplicates:** If a perishable item is listed multiple times, it must appear as a separate object for each instance in the final JSON array.
-                5.  **Empty Result:** If no perishable items are found, you must return an empty array `[]`.
-                6.  **No Explanation:** Do NOT provide any text, commentary, or explanation before or after the JSON output.
+IMPORTANT_RULES:
+    1. **Find Purchase Date:** Silently identify the purchase date from the receipt (e.g., "11/06/24"). This date is your "day zero" for all estimations. Do NOT include this date in the output.
+    
+    2. **Include All Expirable Items:** Include all food or beverage products that can expire or spoil within 100 days, including:
+        - Fresh, refrigerated, or frozen foods (meat, seafood, produce, dairy, eggs, bread, bakery goods).
+        - Refrigerated packaged foods (e.g., yogurt, hummus, deli meat, salad dressing, tortillas).
+        - Prepared or ready-to-eat foods.
+        - Beverages that spoil (e.g., milk, juice, smoothies).
+        - Frozen foods (e.g., frozen vegetables, frozen chicken).
 
-                RECEIPT_TEXT:
-                {ocr_text}
+    3. **Exclude Non-Expirable or Long-Lasting Items:** 
+        - Exclude any product with a typical shelf life greater than 100 days (e.g., canned goods, dry pasta, condiments, peanut butter, coffee, shelf-stable snacks, sealed jars).
+        - Exclude all household or non-food items (e.g., paper towels, soap, detergent).
 
-                JSON_OUTPUT:"""
+    4. **Normalize Item Names (Critical):**
+        - Simplify each item name to its most generic, singular noun form.
+        - Remove brand names, sizes, and flavor descriptors.
+        - **Retain adjectives only if they change expiration behavior.** 
+          For example:
+            - Keep “Frozen,” “Cooked,” “Raw,” “Smoked,” “Fresh,” “Deli,” “Prepared,” or “Baked.”
+            - Remove non-essential adjectives such as “Organic,” “Whole,” “Low-fat,” “Italian,” or “Sweet.”
+        - Examples:
+            - “Organic Gala Apples” → “Apple”
+            - “Whole Milk” → “Milk”
+            - “Shredded Mozzarella Cheese” → “Cheese”
+            - “Frozen Chicken Strips” → “Frozen Chicken”
+            - “Fresh Atlantic Salmon” → “Fresh Salmon”
+            - “Cooked Ham” → “Cooked Ham”
+            - “Greek Yogurt” → “Yogurt”
+
+    5. **Handle Abbreviations (Essential):**
+        - Infer full item names from abbreviated forms to determine perishability.
+            - Example (Include): `GV PARM` → “Cheese”
+            - Example (Include): `FRZ CHIC STRPS` → “Frozen Chicken”
+            - Example (Ignore): `GV CHNK CHKN` → “Canned Chicken” → shelf-stable → *ignore*
+            - Example (Ignore): `GV PNT BUTTR` → “Peanut Butter” → shelf-stable → *ignore*
+
+    6. **Handle Multiples:** If a perishable item appears more than once, output a separate object for each instance.
+
+    7. **Shelf Life Cutoff:** Do NOT include any item whose typical freshness or expiration exceeds 100 days from the purchase date.
+
+    8. **Empty Result:** If no valid expirable items are found, return an empty array `[]`.
+
+    9. **No Extra Text:** Output *only* the JSON array—no commentary, explanation, or metadata.
+
+RECEIPT_TEXT:
+    {ocr_text}
+
+JSON_OUTPUT:
+
+
+"""
 
     def _parse_response(self, response_text: str) -> list[dict[str, Any]]:
         json_match = re.search(r"\[.*\]", response_text, re.DOTALL)

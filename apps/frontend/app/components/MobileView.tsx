@@ -33,11 +33,17 @@ interface UploadResponse {
   processing_time_ms: number;
 }
 
+import { useState, useEffect } from 'react';
+import AuthIntro from './AuthIntro';
+import AuthForm from './AuthForm';
+import IngredientsList from './IngredientsList';
+import ReceiptsList from './ReceiptsList';
+
 export default function MobileView() {
-  const [items, setItems] = useState<GroceryItem[]>([]);
-  const [newItem, setNewItem] = useState('');
   const [signedIn, setSignedIn] = useState(false);
-  const [showSignIn, setShowSignIn] = useState(true);
+  const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
+  const [userToken, setUserToken] = useState<string | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);
@@ -92,27 +98,83 @@ export default function MobileView() {
     if (newItem.trim() !== '') {
       setItems([...items, { id: Date.now(), name: newItem, completed: false }]);
       setNewItem('');
+  useEffect(() => {
+    const token = localStorage.getItem('access_token');
+    if (token) {
+      // Try to get userId from localStorage, or decode from token
+      let userId = localStorage.getItem('user_id');
+      if (!userId) {
+        // Decode JWT to get user_id if not stored
+        try {
+          const base64Url = token.split('.')[1];
+          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(
+            atob(base64)
+              .split('')
+              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+              .join('')
+          );
+          const payload = JSON.parse(jsonPayload);
+          userId = payload.sub || null;
+          if (userId) {
+            localStorage.setItem('user_id', userId);
+          }
+        } catch (error) {
+          console.error('Error decoding JWT:', error);
+        }
+      }
+      
+      if (userId) {
+        setSignedIn(true);
+        setUserToken(token);
+        setCurrentUserId(userId);
+        // Don't set authView when signed in - user goes directly to app
+      } else {
+        setAuthView('intro'); // Show intro if no valid user
+      }
+    } else {
+      setAuthView('intro'); // Show intro if no token
     }
-  };
+  }, []);
 
-  const handleToggleItem = (id: number) => {
-    setItems(
-      items.map((item) =>
-        item.id === id ? { ...item, completed: !item.completed } : item
-      )
-    );
-  };
-
-  const handleRemoveItem = (id: number) => {
-    setItems(items.filter((item) => item.id !== id));
-  };
-
-  const handleSignIn = () => {
+  const handleSignIn = (accessToken: string, userId: string) => {
     setSignedIn(true);
+    setUserToken(accessToken);
+    setCurrentUserId(userId);
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = (accessToken: string, userId: string) => {
     setSignedIn(true);
+    setUserToken(accessToken);
+    setCurrentUserId(userId);
+  };
+
+  const handleSignOut = () => {
+    // Clear localStorage
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('user_id');
+    
+    // Reset state
+    setSignedIn(false);
+    setAuthView('intro');
+    setUserToken(null);
+    setCurrentUserId(null);
+  };
+
+  const handleSignInClick = () => {
+    setAuthView('signin');
+  };
+
+  const handleSignUpClick = () => {
+    setAuthView('signup');
+  };
+
+  const handleBackToIntro = () => {
+    setAuthView('intro');
+  };
+
+  const handleSwitchMode = () => {
+    setAuthView(authView === 'signin' ? 'signup' : 'signin');
   };
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -182,79 +244,42 @@ export default function MobileView() {
   };
 
   if (!signedIn) {
+    if (authView === 'intro') {
+      return <AuthIntro onSignInClick={handleSignInClick} onSignUpClick={handleSignUpClick} />;
+    }
+    
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-green-500 to-green-800 p-4 text-white">
-        {showSignIn ? (
-          <SignIn onSignIn={handleSignIn} />
-        ) : (
-          <SignUp onSignUp={handleSignUp} />
-        )}
-        <button
-          onClick={() => setShowSignIn(!showSignIn)}
-          className="mt-4 text-white underline"
-        >
-          {showSignIn ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
-        </button>
-      </div>
+      <AuthForm
+        mode={authView === 'signin' ? 'signin' : 'signup'}
+        onSignIn={handleSignIn}
+        onSignUp={handleSignUp}
+        onBack={handleBackToIntro}
+        onSwitchMode={handleSwitchMode}
+      />
     );
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center bg-white py-12 px-8 dark:bg-black sm:items-start">
-        <header className="w-full">
-          <h1 className="text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            Grocery List
-          </h1>
-        </header>
-
-        <div className="mt-8 w-full">
-          <div className="flex gap-4">
-            <input
-              type="text"
-              value={newItem}
-              onChange={(e) => setNewItem(e.target.value)}
-              placeholder="Add a new item"
-              className="flex-grow rounded-full border border-solid border-black/[.08] px-5 py-3 text-black transition-colors focus:border-transparent focus:bg-black/[.04] dark:border-white/[.145] dark:bg-black dark:text-white dark:focus:bg-[#1a1a1a]"
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-green-100 font-sans">
+      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center bg-white py-12 px-8 sm:items-start">
+        <header className="w-full flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <img 
+              src="/PantryPiolotLogo.png" 
+              alt="PantryPilot Logo" 
+              className="h-10 w-auto"
             />
-            <button
-              onClick={handleAddItem}
-              className="rounded-full bg-foreground px-5 py-3 font-medium text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc]"
-            >
-              Add
-            </button>
+            <h1 className="text-3xl font-semibold leading-10 tracking-tight text-green-800">
+              PantryPilot
+            </h1>
           </div>
-        </div>
-
-        <ul className="mt-8 w-full space-y-4">
-          <AnimatePresence>
-            {items.map((item) => (
-              <motion.li
-                key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.3 }}
-                className="flex items-center justify-between rounded-lg bg-zinc-100 p-4 dark:bg-zinc-900"
-              >
-                <span
-                  className={`text-lg ${
-                    item.completed ? 'text-zinc-500 line-through dark:text-zinc-400' : 'text-black dark:text-zinc-50'
-                  }`}
-                  onClick={() => handleToggleItem(item.id)}
-                >
-                  {item.name}
-                </span>
-                <button
-                  onClick={() => handleRemoveItem(item.id)}
-                  className="text-red-500 hover:text-red-700"
-                >
-                  Remove
-                </button>
-              </motion.li>
-            ))}
-          </AnimatePresence>
-        </ul>
+          <button
+            onClick={handleSignOut}
+            className="rounded-full bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600"
+          >
+            Sign Out
+          </button>
+        </header>
 
         <ReceiptsList 
           receipts={receipts}
@@ -265,6 +290,8 @@ export default function MobileView() {
           fileInputRef={fileInputRef}
           handleFileUpload={handleFileUpload}
         />
+        <IngredientsList userId={currentUserId} />
+        <ReceiptsList userId={currentUserId} />
       </main>
     </div>
   );

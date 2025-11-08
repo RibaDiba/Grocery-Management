@@ -68,42 +68,50 @@ class ReceiptParser:
 
     def _build_prompt(self, ocr_text: str) -> str:
         return f"""SYSTEM_ROLE:
-            You are an expert receipt parser and food data normalizer. Your role is to extract all expirable food items from a store receipt and estimate their typical freshness duration.
+            You are an expert receipt parser and food data normalizer. Your role is to extract all food items from a store receipt and estimate their typical freshness duration *only* if they are perishable.
 
         USER_ID: {self.user_id}
 
-        TASK: Analyze the provided receipt text. Identify the purchase date to use as a reference. Then, extract all items that are perishable or have an actual expiration or “best by” date (i.e., any consumable product that spoils or loses freshness within 100 days of purchase). For each item, normalize its name to the simplest, most general form—but retain adjectives only if they meaningfully affect freshness duration—and provide an estimated shelf life in days.
+        TASK: Analyze the provided receipt text. Identify the purchase date to use as a reference. Then, extract all food items. For each item, normalize its name to the simplest, most general form.
 
-        OUTPUT_FORMAT: You MUST return only a valid JSON array of objects. Each object must contain three keys:
+        If the item is perishable (i.e., any consumable product that spoils or loses freshness within 100 days of purchase), provide an estimated shelf life in days.
 
-        name: (string) The simplified, generic name of the food item (e.g., "Milk", "Cheese", "Apple", "Chicken", "Frozen Chicken").
+        If the item is shelf-stable (lasts longer than 100 days), do NOT provide a shelf life.
+
+        OUTPUT_FORMAT: You MUST return only a valid JSON array of objects. Each object must contain the following:
+
+        REQUIRED_KEY:
+        name: (string) The simplified, generic name of the food item (e.g., "Milk", "Cheese", "Apple", "Canned Chicken", "Peanut Butter").
+
+        CONDITIONAL_KEYS (Perishable items ONLY):
+        If, and only if, the item is perishable (spoils within 100 days), you MUST also include:
 
         min_days: (int) The minimum number of days in the estimated freshness range (e.g., if the range is 3-5 days, this value is 3).
 
         max_days: (int) The maximum number of days in the estimated freshness range (e.g., if the range is 3-5 days, this value is 5).
 
-        Important: If the freshness duration is a single number (e.g., "7 days"), set both min_days and max_days to that number (e.g., "min_days": 7, "max_days": 7).
+        Important: If the freshness duration for a perishable item is a single number (e.g., "7 days"), set both min_days and max_days to that number (e.g., "min_days": 7, "max_days": 7).
+        
+        Example Output:
+        [
+          {"name": "Milk", "min_days": 5, "max_days": 7},
+          {"name": "Apple", "min_days": 14, "max_days": 21},
+          {"name": "Canned Chicken"},
+          {"name": "Peanut Butter"}
+        ]
 
         IMPORTANT_RULES:
 
         Find Purchase Date: Silently identify the purchase date from the receipt (e.g., "11/06/24"). This date is your "day zero" for all estimations. Do NOT include this date in the output.
 
-        Include All Expirable Items: Include all food or beverage products that can expire or spoil within 100 days, including:
+        Include All Food Items: Include all food or beverage products, including:
+        
+        Fresh, refrigerated, or frozen foods (meat, produce, dairy, bread).
+        
+        Shelf-stable items (canned goods, dry pasta, condiments, peanut butter, coffee, sealed jars).
 
-        Fresh, refrigerated, or frozen foods (meat, seafood, produce, dairy, eggs, bread, bakery goods).
-
-        Refrigerated packaged foods (e.g., yogurt, hummus, deli meat, salad dressing, tortillas).
-
-        Prepared or ready-to-eat foods.
-
-        Beverages that spoil (e.g., milk, juice, smoothies).
-
-        Frozen foods (e.g., frozen vegetables, frozen chicken).
-
-        Exclude Non-Expirable or Long-Lasting Items:
-
-        Exclude any product with a typical shelf life greater than 100 days (e.g., canned goods, dry pasta, condiments, peanut butter, coffee, shelf-stable snacks, sealed jars).
-
+        Exclude Non-Food Items:
+        
         Exclude all household or non-food items (e.g., paper towels, soap, detergent).
 
         Normalize Item Names (Critical):
@@ -119,38 +127,34 @@ class ReceiptParser:
         Remove non-essential adjectives such as “Organic,” “Whole,” “Low-fat,” “Italian,” or “Sweet.”
 
         Examples:
-
+        
         “Organic Gala Apples” → “Apple”
-
+        
         “Whole Milk” → “Milk”
-
+        
         “Shredded Mozzarella Cheese” → “Cheese”
-
+        
         “Frozen Chicken Strips” → “Frozen Chicken”
-
+        
         “Fresh Atlantic Salmon” → “Fresh Salmon”
-
-        “Cooked Ham” → “Cooked Ham”
-
+        
         “Greek Yogurt” → “Yogurt”
 
         Handle Abbreviations (Essential):
 
         Infer full item names from abbreviated forms to determine perishability.
 
-        Example (Include): GV PARM → “Cheese”
+        Example (Perishable): GV PARM → {"name": "Cheese", "min_days": 14, "max_days": 21}
+        
+        Example (Perishable): FRZ CHIC STRPS → {"name": "Frozen Chicken", "min_days": 90, "max_days": 100}
+        
+        Example (Shelf-Stable): GV CHNK CHKN → {"name": "Canned Chicken"}
+        
+        Example (Shelf-Stable): GV PNT BUTTR → {"name": "Peanut Butter"}
 
-        Example (Include): FRZ CHIC STRPS → “Frozen Chicken”
+        Handle Multiples: If a food item appears more than once, output a separate object for each instance.
 
-        Example (Ignore): GV CHNK CHKN → “Canned Chicken” → shelf-stable → ignore
-
-        Example (Ignore): GV PNT BUTTR → “Peanut Butter” → shelf-stable → ignore
-
-        Handle Multiples: If a perishable item appears more than once, output a separate object for each instance.
-
-        Shelf Life Cutoff: Do NOT include any item whose typical freshness or expiration exceeds 100 days from the purchase date.
-
-        Empty Result: If no valid expirable items are found, return an empty array [].
+        Empty Result: If no valid food items are found, return an empty array [].
 
         No Extra Text: Output only the JSON array—no commentary, explanation, or metadata.
 
@@ -169,14 +173,30 @@ class ReceiptParser:
         docs = []
         now = datetime.now(timezone.utc)
         for i in items:
-            if isinstance(i, dict) and "name" in i:
-                docs.append({
-                    "user_id": user_oid,
-                    "name": str(i.get("name")),
-                    "min_days": i.get("min_days"),
-                    "max_days": i.get("max_days"),
-                    "created_at": now,
-                })
+            if not (isinstance(i, dict) and "name" in i):
+                continue
+
+            # Always store the name. If both min_days and max_days are present
+            # and valid integers, store them. Otherwise treat the item as
+            # non-perishable and do not add perish fields to the document.
+            name = str(i.get("name"))
+            doc = {
+                "user_id": user_oid,
+                "name": name,
+                "created_at": now,
+            }
+
+            min_raw = i.get("min_days")
+            max_raw = i.get("max_days")
+            if min_raw is not None and max_raw is not None:
+                try:
+                    doc["min_days"] = int(min_raw)
+                    doc["max_days"] = int(max_raw)
+                except (TypeError, ValueError):
+                    # If conversion fails, treat as non-perishable (omit fields)
+                    pass
+
+            docs.append(doc)
         if not docs:
             return []
         

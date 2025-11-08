@@ -6,21 +6,26 @@ from typing import Any
 from config import config
 
 try:
-    import google.generativeai as genai  
+    import google.generativeai as genai
 except Exception:
     genai = None
 
 
 class ReceiptParser:
+    """Parses receipt OCR text via the configured LLM and inserts groceries.
+
+    The parser expects the LLM to return a JSON array of objects. Each object
+    must contain at least a `name` key. Perishable items include `min_days`
+    and `max_days` (integers). Non-perishable items will be represented by
+    objects that only include `name`.
+    """
 
     def __init__(self, user_id: str):
         if not config.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY is required")
 
         if genai is None:
-            raise ImportError(
-                "google-generativeai is not installed."
-            )
+            raise ImportError("google-generativeai is not installed.")
 
         genai.configure(api_key=config.GEMINI_API_KEY)
         self.model: genai.GenerativeModel = genai.GenerativeModel(config.LLM_MODEL)
@@ -29,6 +34,11 @@ class ReceiptParser:
         self.user_id = user_id
 
     def parse_receipt_text(self, ocr_text: str) -> list[dict[str, Any]]:
+        """Return a list of item dicts parsed from the receipt text.
+
+        If the model call fails or the model returns invalid JSON, return an
+        empty list (caller will handle uploading if desired).
+        """
         if not ocr_text or not ocr_text.strip():
             return []
 
@@ -36,10 +46,15 @@ class ReceiptParser:
 
         try:
             response_text = self._call_model(prompt)
+        except Exception:
+            # Modeling service failed; treat as no items found.
+            return []
+
+        try:
             items = self._parse_response(response_text)
             return items
-        except Exception as e:
-            raise Exception(f"Failed to parse receipt with Gemini: {str(e)}")
+        except Exception:
+            return []
 
     def _call_model(self, prompt: str) -> str:
         generation_config = genai.types.GenerationConfig(
@@ -67,128 +82,106 @@ class ReceiptParser:
         return str(resp)
 
     def _build_prompt(self, ocr_text: str) -> str:
-        return f"""SYSTEM_ROLE:
-            You are an expert receipt parser and food data normalizer. Your role is to extract all expirable food items from a store receipt and estimate their typical freshness duration.
+        """Construct the LLM prompt; include USER_ID and the receipt text.
 
-        USER_ID: {self.user_id}
-
-        TASK: Analyze the provided receipt text. Identify the purchase date to use as a reference. Then, extract all items that are perishable or have an actual expiration or “best by” date (i.e., any consumable product that spoils or loses freshness within 100 days of purchase). For each item, normalize its name to the simplest, most general form—but retain adjectives only if they meaningfully affect freshness duration—and provide an estimated shelf life in days.
-
-        OUTPUT_FORMAT: You MUST return only a valid JSON array of objects. Each object must contain three keys:
-
-        name: (string) The simplified, generic name of the food item (e.g., "Milk", "Cheese", "Apple", "Chicken", "Frozen Chicken").
-
-        min_days: (int) The minimum number of days in the estimated freshness range (e.g., if the range is 3-5 days, this value is 3).
-
-        max_days: (int) The maximum number of days in the estimated freshness range (e.g., if the range is 3-5 days, this value is 5).
-
-        Important: If the freshness duration is a single number (e.g., "7 days"), set both min_days and max_days to that number (e.g., "min_days": 7, "max_days": 7).
-
-        IMPORTANT_RULES:
-
-        Find Purchase Date: Silently identify the purchase date from the receipt (e.g., "11/06/24"). This date is your "day zero" for all estimations. Do NOT include this date in the output.
-
-        Include All Expirable Items: Include all food or beverage products that can expire or spoil within 100 days, including:
-
-        Fresh, refrigerated, or frozen foods (meat, seafood, produce, dairy, eggs, bread, bakery goods).
-
-        Refrigerated packaged foods (e.g., yogurt, hummus, deli meat, salad dressing, tortillas).
-
-        Prepared or ready-to-eat foods.
-
-        Beverages that spoil (e.g., milk, juice, smoothies).
-
-        Frozen foods (e.g., frozen vegetables, frozen chicken).
-
-        Exclude Non-Expirable or Long-Lasting Items:
-
-        Exclude any product with a typical shelf life greater than 100 days (e.g., canned goods, dry pasta, condiments, peanut butter, coffee, shelf-stable snacks, sealed jars).
-
-        Exclude all household or non-food items (e.g., paper towels, soap, detergent).
-
-        Normalize Item Names (Critical):
-
-        Simplify each item name to its most generic, singular noun form.
-
-        Remove brand names, sizes, and flavor descriptors.
-
-        Retain adjectives only if they change expiration behavior. For example:
-
-        Keep “Frozen,” “Cooked,” “Raw,” “Smoked,” “Fresh,” “Deli,” “Prepared,” or “Baked.”
-
-        Remove non-essential adjectives such as “Organic,” “Whole,” “Low-fat,” “Italian,” or “Sweet.”
-
-        Examples:
-
-        “Organic Gala Apples” → “Apple”
-
-        “Whole Milk” → “Milk”
-
-        “Shredded Mozzarella Cheese” → “Cheese”
-
-        “Frozen Chicken Strips” → “Frozen Chicken”
-
-        “Fresh Atlantic Salmon” → “Fresh Salmon”
-
-        “Cooked Ham” → “Cooked Ham”
-
-        “Greek Yogurt” → “Yogurt”
-
-        Handle Abbreviations (Essential):
-
-        Infer full item names from abbreviated forms to determine perishability.
-
-        Example (Include): GV PARM → “Cheese”
-
-        Example (Include): FRZ CHIC STRPS → “Frozen Chicken”
-
-        Example (Ignore): GV CHNK CHKN → “Canned Chicken” → shelf-stable → ignore
-
-        Example (Ignore): GV PNT BUTTR → “Peanut Butter” → shelf-stable → ignore
-
-        Handle Multiples: If a perishable item appears more than once, output a separate object for each instance.
-
-        Shelf Life Cutoff: Do NOT include any item whose typical freshness or expiration exceeds 100 days from the purchase date.
-
-        Empty Result: If no valid expirable items are found, return an empty array [].
-
-        No Extra Text: Output only the JSON array—no commentary, explanation, or metadata.
-
-        RECEIPT_TEXT: {ocr_text}
-
-        JSON_OUTPUT:
-
+        Build the string safely (no f-string with braces) so literal JSON
+        examples in the prompt don't interfere with Python formatting.
         """
+        parts = [
+            "SYSTEM_ROLE:\n",
+            "You are an expert receipt parser and food data normalizer. Your role is to extract all food items from a store receipt and estimate their typical freshness duration *only* if they are perishable.\n\n",
+            "USER_ID: ", str(self.user_id), "\n\n",
+            "TASK: Analyze the provided receipt text. Identify the purchase date to use as a reference. Then, extract all food items. For each item, normalize its name to the simplest, most general form.\n\n",
+            "If the item is perishable (i.e., any consumable product that spoils or loses freshness within 100 days of purchase), provide an estimated shelf life in days.\n\n",
+            "If the item is shelf-stable (lasts longer than 100 days), do NOT provide a shelf life.\n\n",
+            "OUTPUT_FORMAT: You MUST return only a valid JSON array of objects. Each object must contain the following:\n\n",
+            "REQUIRED_KEY:\n",
+            "name: (string) The simplified, generic name of the food item (e.g., \"Milk\", \"Cheese\", \"Apple\", \"Canned Chicken\", \"Peanut Butter\").\n\n",
+            "CONDITIONAL_KEYS (Perishable items ONLY):\n",
+            "If, and only if, the item is perishable (spoils within 100 days), you MUST also include:\n\n",
+            "min_days: (int) The minimum number of days in the estimated freshness range.\n\n",
+            "max_days: (int) The maximum number of days in the estimated freshness range.\n\n",
+            "Important: If the freshness duration for a perishable item is a single number (e.g., \"7 days\"), set both min_days and max_days to that number.\n\n",
+            "Example Output:\n",
+            "[\n",
+            "  {\"name\": \"Milk\", \"min_days\": 5, \"max_days\": 7},\n",
+            "  {\"name\": \"Apple\", \"min_days\": 14, \"max_days\": 21},\n",
+            "  {\"name\": \"Canned Chicken\"},\n",
+            "  {\"name\": \"Peanut Butter\"}\n",
+            "]\n\n",
+            "IMPORTANT_RULES:\n\n",
+            "Find Purchase Date: Silently identify the purchase date from the receipt (e.g., \"11/06/24\"). This date is your \"day zero\" for all estimations. Do NOT include this date in the output.\n\n",
+            "Include All Food Items: Include all food or beverage products, including fresh, refrigerated, or frozen foods and shelf-stable items.\n\n",
+            "Exclude Non-Food Items: Exclude all household or non-food items (e.g., paper towels, soap, detergent).\n\n",
+            "Normalize Item Names (Critical): Simplify each item name to its most generic, singular noun form.\n\n",
+            "Handle Abbreviations (Essential): Infer full item names from abbreviated forms to determine perishability.\n\n",
+            "Handle Multiples: If a food item appears more than once, output a separate object for each instance.\n\n",
+            "Empty Result: If no valid food items are found, return an empty array [].\n\n",
+            "No Extra Text: Output only the JSON array—no commentary, explanation, or metadata.\n\n",
+            "RECEIPT_TEXT: ", ocr_text, "\n\n",
+            "JSON_OUTPUT:\n\n",
+        ]
+
+        return "".join(parts)
 
     def add_groceries_to_db(self, items: list[dict[str, Any]]) -> list[str]:
+        """Insert parsed items into the groceries collection.
+
+        Rules:
+        - Always store `name` and `created_at`.
+        - Store `min_days` and `max_days` only when both are present and valid ints.
+        - Return list of inserted ids as strings, or empty list if nothing inserted.
+        """
         from datetime import datetime, timezone
         from bson import ObjectId
         from database import get_groceries_collection
+
         col = get_groceries_collection()
         user_oid = ObjectId(self.user_id)
-        docs = []
+        docs: list[dict[str, Any]] = []
         now = datetime.now(timezone.utc)
+
         for i in items:
-            if isinstance(i, dict) and "name" in i:
-                docs.append({
-                    "user_id": user_oid,
-                    "name": str(i.get("name")),
-                    "min_days": i.get("min_days"),
-                    "max_days": i.get("max_days"),
-                    "created_at": now,
-                })
+            if not (isinstance(i, dict) and "name" in i):
+                continue
+
+            name = str(i.get("name"))
+            doc: dict[str, Any] = {
+                "user_id": user_oid,
+                "name": name,
+                "created_at": now,
+            }
+
+            min_raw = i.get("min_days")
+            max_raw = i.get("max_days")
+            if min_raw is not None and max_raw is not None:
+                try:
+                    doc["min_days"] = int(min_raw)
+                    doc["max_days"] = int(max_raw)
+                except (TypeError, ValueError):
+                    # Invalid perish info -> omit those fields (treat as non-perishable)
+                    pass
+
+            docs.append(doc)
+
         if not docs:
             return []
-        
+
         result = col.insert_many(docs)
         return [str(id) for id in result.inserted_ids]
 
     def _parse_response(self, response_text: str) -> list[dict[str, Any]]:
+        """Extract and validate JSON array from model output.
+
+        Accepts items that only include `name` (non-perishable). If both
+        `min_days` and `max_days` are present and valid ints, include them.
+        """
         json_match = re.search(r"\[.*\]", response_text, re.DOTALL)
 
         if not json_match:
             return []
         json_str = json_match.group(0)
+
         try:
             items = json.loads(json_str)
             if not isinstance(items, list):
@@ -196,15 +189,28 @@ class ReceiptParser:
 
             validated_items: list[dict[str, Any]] = []
             for item in items:
-                if isinstance(item, dict) and "name" in item and "min_days" in item and "max_days" in item:
+                if not (isinstance(item, dict) and "name" in item):
+                    continue
+
+                name = str(item["name"])
+                min_raw = item.get("min_days")
+                max_raw = item.get("max_days")
+
+                if min_raw is not None and max_raw is not None:
                     try:
+                        min_i = int(min_raw)
+                        max_i = int(max_raw)
                         validated_items.append({
-                            "name": str(item["name"]),
-                            "min_days": int(item["min_days"]),
-                            "max_days": int(item["max_days"]),
+                            "name": name,
+                            "min_days": min_i,
+                            "max_days": max_i,
                         })
-                    except (ValueError, TypeError):
                         continue
+                    except (ValueError, TypeError):
+                        pass
+
+                # Non-perishable or missing perish info
+                validated_items.append({"name": name})
 
             return validated_items
 

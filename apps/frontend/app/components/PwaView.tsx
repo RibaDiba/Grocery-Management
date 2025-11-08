@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import SignIn from './SignIn';
 
 interface GroceryItem {
   id: number;
@@ -11,6 +13,7 @@ interface GroceryItem {
 export default function PwaView() {
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [newItem, setNewItem] = useState('');
+  const [signedIn, setSignedIn] = useState(false);
 
   const handleAddItem = () => {
     if (newItem.trim() !== '') {
@@ -30,6 +33,14 @@ export default function PwaView() {
   const handleRemoveItem = (id: number) => {
     setItems(items.filter((item) => item.id !== id));
   };
+
+  const handleSignIn = () => {
+    setSignedIn(true);
+  };
+
+  if (!signedIn) {
+    return <SignIn onSignIn={handleSignIn} />; // Render SignIn component if not signed in
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
@@ -59,27 +70,33 @@ export default function PwaView() {
         </div>
 
         <ul className="mt-8 w-full space-y-4">
-          {items.map((item) => (
-            <li
-              key={item.id}
-              className="flex items-center justify-between rounded-lg bg-zinc-100 p-4 dark:bg-zinc-900"
-            >
-              <span
-                className={`text-lg ${
-                  item.completed ? 'text-zinc-500 line-through dark:text-zinc-400' : 'text-black dark:text-zinc-50'
-                }`}
-                onClick={() => handleToggleItem(item.id)}
+          <AnimatePresence>
+            {items.map((item) => (
+              <motion.li
+                key={item.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -20 }}
+                transition={{ duration: 0.3 }}
+                className="flex items-center justify-between rounded-lg bg-zinc-100 p-4 dark:bg-zinc-900"
               >
-                {item.name}
-              </span>
-              <button
-                onClick={() => handleRemoveItem(item.id)}
-                className="text-red-500 hover:text-red-700"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
+                <span
+                  className={`text-lg ${
+                    item.completed ? 'text-zinc-500 line-through dark:text-zinc-400' : 'text-black dark:text-zinc-50'
+                  }`}
+                  onClick={() => handleToggleItem(item.id)}
+                >
+                  {item.name}
+                </span>
+                <button
+                  onClick={() => handleRemoveItem(item.id)}
+                  className="text-red-500 hover:text-red-700"
+                >
+                  Remove
+                </button>
+              </motion.li>
+            ))}
+          </AnimatePresence>
         </ul>
       </main>
     </div>

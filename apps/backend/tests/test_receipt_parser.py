@@ -23,7 +23,7 @@ class TestReceiptParser(unittest.TestCase):
             mock_config.LLM_MODEL = "gemini-pro"
             mock_config.LLM_MAX_TOKENS = "2048"
             mock_config.LLM_TEMPERATURE = "0.7"
-            self.parser = ReceiptParser()
+            self.parser = ReceiptParser(user_id="test_user")
 
     def tearDown(self):
         self.patcher.stop()
@@ -52,7 +52,10 @@ class TestReceiptParser(unittest.TestCase):
         self.mock_model.generate_content.return_value.text = mock_llm_response
 
         # Call the method to be tested
-        parsed_items = self.parser.parse_receipt_text(ocr_text)
+        with patch.object(self.parser, '_build_prompt', wraps=self.parser._build_prompt) as spy_build_prompt:
+            parsed_items = self.parser.parse_receipt_text(ocr_text)
+            spy_build_prompt.assert_called_once_with(ocr_text)
+
 
         # Assertions
         self.assertEqual(len(parsed_items), 3)
@@ -61,6 +64,8 @@ class TestReceiptParser(unittest.TestCase):
         self.assertEqual(parsed_items[2]["name"], "Bread")
         self.assertIsInstance(parsed_items[0]["min_days"], int)
         self.assertIsInstance(parsed_items[0]["max_days"], int)
+        self.assertIn("USER_ID: test_user", self.parser._build_prompt(ocr_text))
+
 
     def test_parse_receipt_text_empty_input(self):
         parsed_items = self.parser.parse_receipt_text("")

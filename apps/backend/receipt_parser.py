@@ -13,7 +13,7 @@ except Exception:
 
 class ReceiptParser:
 
-    def __init__(self):
+    def __init__(self, user_id: str):
         if not config.GEMINI_API_KEY:
             raise ValueError("GEMINI_API_KEY is required")
 
@@ -26,6 +26,7 @@ class ReceiptParser:
         self.model: genai.GenerativeModel = genai.GenerativeModel(config.LLM_MODEL)
         self.max_tokens: int = int(config.LLM_MAX_TOKENS)
         self.temperature: float = float(config.LLM_TEMPERATURE)
+        self.user_id = user_id
 
     def parse_receipt_text(self, ocr_text: str) -> list[dict[str, Any]]:
         if not ocr_text or not ocr_text.strip():
@@ -68,6 +69,8 @@ class ReceiptParser:
     def _build_prompt(self, ocr_text: str) -> str:
         return f"""SYSTEM_ROLE:
     You are an expert receipt parser and food data normalizer. Your role is to extract all expirable food items from a store receipt and estimate their typical freshness duration.
+
+USER_ID: {self.user_id}
 
 TASK: Analyze the provided receipt text. Identify the purchase date to use as a reference. Then, extract all items that are perishable or have an actual expiration or “best by” date (i.e., any consumable product that spoils or loses freshness within 100 days of purchase). For each item, normalize its name to the simplest, most general form—but retain adjectives only if they meaningfully affect freshness duration—and provide an estimated shelf life in days.
 
@@ -129,7 +132,7 @@ Examples:
 
 “Cooked Ham” → “Cooked Ham”
 
-“Greek Yogurt” → “Yogota”
+“Greek Yogurt” → “Yogurt”
 
 Handle Abbreviations (Essential):
 

@@ -23,7 +23,7 @@ class ReceiptParser:
             )
 
         genai.configure(api_key=config.GEMINI_API_KEY)
-        self.model: str = config.LLM_MODEL
+        self.model: genai.GenerativeModel = genai.GenerativeModel(config.LLM_MODEL)
         self.max_tokens: int = int(config.LLM_MAX_TOKENS)
         self.temperature: float = float(config.LLM_TEMPERATURE)
 
@@ -41,11 +41,13 @@ class ReceiptParser:
             raise Exception(f"Failed to parse receipt with Gemini: {str(e)}")
 
     def _call_model(self, prompt: str) -> str:
-        resp = genai.generate(
-            model=self.model,
-            prompt=prompt,
+        generation_config = genai.types.GenerationConfig(
             temperature=self.temperature,
             max_output_tokens=self.max_tokens,
+        )
+        resp = self.model.generate_content(
+            prompt,
+            generation_config=generation_config,
         )
         if isinstance(resp, str):
             return resp

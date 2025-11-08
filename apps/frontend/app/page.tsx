@@ -9,20 +9,24 @@ export default function Home() {
   const [view, setView] = useState<'loading' | 'desktop' | 'mobile' | 'pwa'>('loading');
 
   useEffect(() => {
-    const isPWA = window.matchMedia('(display-mode: standalone)').matches;
-    if (isPWA) {
-      setView('pwa');
-      return;
-    }
+    const determineView = () => {
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+      if (isPWA) {
+        return 'pwa';
+      }
 
-    const userAgent = navigator.userAgent;
-    const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      const userAgent = navigator.userAgent;
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
 
-    if (isMobile) {
-      setView('mobile');
-    } else {
-      setView('desktop');
-    }
+      if (isMobile) {
+        return 'mobile';
+      } else {
+        return 'desktop';
+      }
+    };
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setView(determineView());
   }, []);
 
   if (view === 'loading') {

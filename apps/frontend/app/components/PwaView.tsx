@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import SignIn from './SignIn';
+import SignUp from './SignUp';
 
 interface GroceryItem {
   id: number;
@@ -14,6 +15,7 @@ export default function PwaView() {
   const [items, setItems] = useState<GroceryItem[]>([]);
   const [newItem, setNewItem] = useState('');
   const [signedIn, setSignedIn] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(true); // New state to toggle between SignIn and SignUp
 
   const handleAddItem = () => {
     if (newItem.trim() !== '') {
@@ -38,8 +40,26 @@ export default function PwaView() {
     setSignedIn(true);
   };
 
+  const handleSignUp = () => {
+    setSignedIn(true);
+  };
+
   if (!signedIn) {
-    return <SignIn onSignIn={handleSignIn} />; // Render SignIn component if not signed in
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-green-500 to-green-800 p-4 text-white">
+        {showSignIn ? (
+          <SignIn onSignIn={handleSignIn} />
+        ) : (
+          <SignUp onSignUp={handleSignUp} />
+        )}
+        <button
+          onClick={() => setShowSignIn(!showSignIn)}
+          className="mt-4 text-white underline"
+        >
+          {showSignIn ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
+        </button>
+      </div>
+    );
   }
 
   return (

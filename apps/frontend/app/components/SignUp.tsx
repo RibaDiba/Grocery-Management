@@ -1,21 +1,26 @@
 import React, { useState } from 'react';
 
-const SignIn = ({ onSignIn }: { onSignIn: () => void }) => {
+const SignUp = ({ onSignUp }: { onSignUp: () => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSignInSubmit = async () => {
+  const handleSignUpSubmit = async () => {
     setError('');
-    if (!email || !password) {
-      setError('Please enter both email and password.');
+    if (password !== confirmPassword) {
+      setError('Passwords do not match');
+      return;
+    }
+    if (!email || !password || !confirmPassword) {
+      setError('Please fill in all fields.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:8000/api/auth/login', {
+      const response = await fetch('http://localhost:8000/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -24,12 +29,11 @@ const SignIn = ({ onSignIn }: { onSignIn: () => void }) => {
       });
 
       if (response.ok) {
-        const data = await response.json();
-        localStorage.setItem('access_token', data.access_token); // Store the token
-        onSignIn(); // Call the parent's onSignIn to change view or navigate
+        // Registration successful
+        onSignUp(); // Call the parent's onSignUp to change view or navigate
       } else {
         const errorData = await response.json();
-        setError(errorData.detail || 'Login failed.');
+        setError(errorData.detail || 'Registration failed.');
       }
     } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Network error or server is unreachable.');
@@ -41,7 +45,7 @@ const SignIn = ({ onSignIn }: { onSignIn: () => void }) => {
   return (
     <div className="flex flex-col items-center justify-center p-4 text-white">
       <div className="w-full max-w-xs text-center">
-        <h1 className="mb-8 text-4xl font-bold">Sign In</h1>
+        <h1 className="mb-8 text-4xl font-bold">Sign Up</h1>
         {error && <p className="text-red-300 mb-4">{error}</p>}
         <div className="mb-4">
           <input
@@ -52,7 +56,7 @@ const SignIn = ({ onSignIn }: { onSignIn: () => void }) => {
             className="w-full rounded-full border border-solid border-white/[.2] bg-white/[.1] px-5 py-3 text-white placeholder-white/[.7] transition-colors focus:border-transparent focus:bg-white/[.2]"
           />
         </div>
-        <div className="mb-6">
+        <div className="mb-4">
           <input
             type="password"
             placeholder="Password"
@@ -61,16 +65,25 @@ const SignIn = ({ onSignIn }: { onSignIn: () => void }) => {
             className="w-full rounded-full border border-solid border-white/[.2] bg-white/[.1] px-5 py-3 text-white placeholder-white/[.7] transition-colors focus:border-transparent focus:bg-white/[.2]"
           />
         </div>
+        <div className="mb-6">
+          <input
+            type="password"
+            placeholder="Confirm Password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            className="w-full rounded-full border border-solid border-white/[.2] bg-white/[.1] px-5 py-3 text-white placeholder-white/[.7] transition-colors focus:border-transparent focus:bg-white/[.2]"
+          />
+        </div>
         <button
-          onClick={handleSignInSubmit}
+          onClick={handleSignUpSubmit}
           disabled={loading}
           className="w-full rounded-full bg-white px-5 py-3 font-medium text-green-700 transition-colors hover:bg-gray-200 disabled:opacity-50"
         >
-          {loading ? 'Signing In...' : 'Sign In'}
+          {loading ? 'Signing Up...' : 'Sign Up'}
         </button>
       </div>
     </div>
   );
 };
 
-export default SignIn;
+export default SignUp;

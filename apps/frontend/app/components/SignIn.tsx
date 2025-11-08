@@ -68,34 +68,57 @@ const SignIn = ({ onSignIn }: { onSignIn: (accessToken: string, userId: string) 
   };
 
   return (
-    <div className="flex flex-col items-center justify-center p-4 text-white">
+    <div className="flex flex-col items-center justify-center p-4">
       <div className="w-full max-w-xs text-center">
-        <h1 className="mb-8 text-4xl font-bold">Sign In</h1>
-        {error && <p className="text-red-300 mb-4">{error}</p>}
+        <h1 className="mb-8 text-4xl font-bold" style={{ color: '#354A33' }}>
+          Log In
+        </h1>
+        {error && <p className="mb-4 text-red-600">{error}</p>}
         <div className="mb-4">
+          <label className="block mb-2 text-left text-sm font-medium" style={{ color: '#354A33' }}>
+            Email
+          </label>
           <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-full border border-solid border-white/[.2] bg-white/[.1] px-5 py-3 text-white placeholder-white/[.7] transition-colors focus:border-transparent focus:bg-white/[.2]"
+            className="w-full rounded-full border border-solid bg-white px-5 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0"
+            style={{
+              color: '#354A33',
+              borderColor: '#CBDFC9',
+              borderRadius: '9999px'
+            }}
           />
         </div>
         <div className="mb-6">
+          <label className="block mb-2 text-left text-sm font-medium" style={{ color: '#354A33' }}>
+            Password
+          </label>
           <input
             type="password"
             placeholder="Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-full border border-solid border-white/[.2] bg-white/[.1] px-5 py-3 text-white placeholder-white/[.7] transition-colors focus:border-transparent focus:bg-white/[.2]"
+            className="w-full rounded-full border border-solid bg-white px-5 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0"
+            style={{
+              color: '#354A33',
+              borderColor: '#CBDFC9',
+              borderRadius: '9999px'
+            }}
           />
         </div>
         <button
           onClick={handleSignInSubmit}
           disabled={loading}
-          className="w-full rounded-full bg-white px-5 py-3 font-medium text-green-700 transition-colors hover:bg-gray-200 disabled:opacity-50"
+          className="w-full rounded-full px-5 py-3 font-medium transition-colors hover:opacity-90 disabled:opacity-50"
+          style={{
+            backgroundColor: '#354A33',
+            color: '#FFFFFF',
+            borderRadius: '9999px'
+          }}
         >
-          {loading ? 'Signing In...' : 'Sign In'}
+          {loading ? 'Signing In...' : 'Log In'}
         </button>
       </div>
     </div>

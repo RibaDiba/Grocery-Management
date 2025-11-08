@@ -1,16 +1,10 @@
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import SignIn from './SignIn';
-import SignUp from './SignUp';
+import AuthIntro from './AuthIntro';
+import AuthForm from './AuthForm';
+import IngredientsList from './IngredientsList';
 import ReceiptsList from './ReceiptsList';
-
-interface GroceryItem {
-  id: number;
-  name: string;
-  completed: boolean;
-}
 
 interface Receipt {
   user_id: string;
@@ -32,12 +26,6 @@ interface UploadResponse {
   raw_text: string;
   processing_time_ms: number;
 }
-
-import { useState, useEffect } from 'react';
-import AuthIntro from './AuthIntro';
-import AuthForm from './AuthForm';
-import IngredientsList from './IngredientsList';
-import ReceiptsList from './ReceiptsList';
 
 export default function PwaView() {
   const [signedIn, setSignedIn] = useState(false);
@@ -206,15 +194,25 @@ export default function PwaView() {
 
       const data: UploadResponse = await response.json();
       
-      if (data.success) {
-        const newItems = data.items.map((item: ParsedGroceryItem) => ({
-          id: Math.random(),
-          name: item.description,
-          completed: false,
-        }));
-        setItems([...items, ...newItems]);
+      // Log the API response to console
+      console.log('Receipt upload successful:', data);
+      console.log('Upload response details:', {
+        success: data.success,
+        total_items: data.total_items,
+        items: data.items,
+        raw_text: data.raw_text,
+        processing_time_ms: data.processing_time_ms,
+      });
+      
+      // Log each extracted item
+      if (data.items && data.items.length > 0) {
+        console.log('Extracted grocery items:');
+        data.items.forEach((item, index) => {
+          console.log(`  Item ${index + 1}:`, item);
+        });
       }
 
+      // Refresh the receipts list
       const receiptsResponse = await fetch('http://localhost:8000/api/receipts/', {
         method: 'GET',
         headers: {
@@ -278,6 +276,7 @@ export default function PwaView() {
           </button>
         </header>
 
+        <IngredientsList userId={currentUserId} />
         <ReceiptsList 
           receipts={receipts}
           loading={loading}
@@ -287,8 +286,6 @@ export default function PwaView() {
           fileInputRef={fileInputRef}
           handleFileUpload={handleFileUpload}
         />
-        <IngredientsList userId={currentUserId} />
-        <ReceiptsList userId={currentUserId} />
       </main>
     </div>
   );

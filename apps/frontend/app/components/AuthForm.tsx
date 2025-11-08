@@ -20,10 +20,19 @@ export default function AuthForm({
   onSwitchMode 
 }: AuthFormProps) {
   return (
-    <div className="relative flex min-h-screen flex-col items-center justify-center bg-gradient-to-br from-green-500 to-green-800 p-4 text-white">
+    <div 
+      className="relative flex min-h-screen flex-col items-center justify-center p-4"
+      style={{
+        background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)'
+      }}
+    >
       <button
         onClick={onBack}
-        className="absolute left-4 top-4 rounded-full bg-white/20 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-white/30"
+        className="absolute left-4 top-4 rounded-full px-4 py-2 text-sm font-medium transition-colors hover:bg-white/20"
+        style={{
+          backgroundColor: 'rgba(255, 255, 255, 0.2)',
+          color: '#354A33'
+        }}
       >
         ← Back
       </button>
@@ -34,6 +43,7 @@ export default function AuthForm({
             src="/PantryPiolotLogo.png" 
             alt="PantryPilot Logo" 
             className="h-16 w-auto"
+            style={{ filter: 'none' }}
           />
         </div>
         {mode === 'signin' ? (
@@ -44,7 +54,8 @@ export default function AuthForm({
         
         <button
           onClick={onSwitchMode}
-          className="mt-4 w-full text-center text-white underline"
+          className="mt-4 w-full text-center underline transition-colors hover:opacity-80"
+          style={{ color: '#4A614F' }}
         >
           {mode === 'signin' 
             ? "Don't have an account? Sign Up" 

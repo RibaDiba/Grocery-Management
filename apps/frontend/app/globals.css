@@ -19,3 +19,9 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Auth form input placeholder styling */
+input[type="email"]::placeholder,
+input[type="password"]::placeholder {
+  color: #9AB099;
+}

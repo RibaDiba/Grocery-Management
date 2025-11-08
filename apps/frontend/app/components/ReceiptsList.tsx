@@ -26,159 +26,7 @@ export default function ReceiptsList({
   fileInputRef,
   handleFileUpload,
 }: ReceiptsListProps) {
-export default function ReceiptsList({ userId }: { userId: string | null }) {
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const fetchReceipts = async () => {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token || !userId) { // Added check for userId
-        setError('No access token or user ID found. Please sign in again.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch('http://localhost:8000/api/receipts/', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Failed to fetch receipts');
-        }
-
-        const data = await response.json();
-        
-        // Log the result to console
-        console.log('Receipts fetched successfully:', data);
-        console.log('Number of receipts:', data.length);
-        
-        // Log each receipt individually
-        data.forEach((receipt: Receipt, index: number) => {
-          console.log(`Receipt ${index + 1}:`, {
-            user_id: receipt.user_id,
-            file_path: receipt.file_path,
-            raw_text: receipt.raw_text,
-            grocery_items: receipt.grocery_items,
-            grocery_items_count: receipt.grocery_items.length,
-          });
-        });
-
-        setReceipts(data);
-        setError(null);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
-        console.error('Error fetching receipts:', err);
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchReceipts();
-  }, [userId]); // Added userId to dependency array
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setUploadError('No access token found. Please sign in again.');
-      return;
-    }
-
-    // Validate file type
-    const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
-    if (!allowedTypes.includes(file.type)) {
-      setUploadError('Invalid file type. Please upload a JPG, PNG, or PDF file.');
-      return;
-    }
-
-    // Validate file size (10MB max)
-    const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-    if (file.size > maxSize) {
-      setUploadError('File size exceeds 10MB limit.');
-      return;
-    }
-
-    setUploading(true);
-    setUploadError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('http://localhost:8000/api/receipt/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to upload receipt');
-      }
-
-      const data: UploadResponse = await response.json();
-      
-      // Log the API response to console
-      console.log('Receipt upload successful:', data);
-      console.log('Upload response details:', {
-        success: data.success,
-        total_items: data.total_items,
-        items: data.items,
-        raw_text: data.raw_text,
-        processing_time_ms: data.processing_time_ms,
-      });
-      
-      // Log each extracted item
-      if (data.items && data.items.length > 0) {
-        console.log('Extracted grocery items:');
-        data.items.forEach((item, index) => {
-          console.log(`  Item ${index + 1}:`, item);
-        });
-      }
-
-      // Refresh the receipts list
-      const receiptsResponse = await fetch('http://localhost:8000/api/receipts/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (receiptsResponse.ok) {
-        const receiptsData = await receiptsResponse.json();
-        setReceipts(receiptsData);
-      }
-
-      // Reset file input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
-      console.error('Error uploading receipt:', err);
-      setUploadError(errorMessage);
-    } finally {
-      setUploading(false);
-    }
-  };
+  // File upload is handled by parent component
 
   if (loading) {
     return (
@@ -237,7 +85,32 @@ export default function ReceiptsList({ userId }: { userId: string | null }) {
           Supported formats: JPG, PNG, PDF (Max 10MB)
         </p>
       </div>
-  
+      {receipts.length === 0 ? (
+        <p className="text-gray-600">No receipts found.</p>
+      ) : (
+        <div className="space-y-4">
+          {receipts.map((receipt, index) => (
+            <div
+              key={index}
+              className="rounded-lg bg-white p-4 shadow-sm border border-green-100"
+            >
+              <p className="text-sm text-gray-600 mb-2">
+                File: {receipt.file_path}
+              </p>
+              <p className="text-sm text-gray-600 mb-2">
+                Grocery Items: {receipt.grocery_items.length}
+              </p>
+              {receipt.grocery_items.length > 0 && (
+                <ul className="list-disc list-inside text-sm text-gray-800">
+                  {receipt.grocery_items.map((item, itemIndex) => (
+                    <li key={itemIndex}>{item}</li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

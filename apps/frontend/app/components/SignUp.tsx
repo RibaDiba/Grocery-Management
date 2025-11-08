@@ -33,7 +33,7 @@ const SignUp = ({ onSignUp }: { onSignUp: () => void }) => {
         onSignUp(); // Call the parent's onSignUp to change view or navigate
       } else {
         const errorData = await response.json();
-        setError(errorData.detail || 'Registration failed.');
+        setError(typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData) || 'Registration failed.');
       }
     } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Network error or server is unreachable.');

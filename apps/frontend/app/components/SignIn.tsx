@@ -29,7 +29,7 @@ const SignIn = ({ onSignIn }: { onSignIn: () => void }) => {
         onSignIn(); // Call the parent's onSignIn to change view or navigate
       } else {
         const errorData = await response.json();
-        setError(errorData.detail || 'Login failed.');
+        setError(typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData) || 'Login failed.');
       }
     } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Network error or server is unreachable.');

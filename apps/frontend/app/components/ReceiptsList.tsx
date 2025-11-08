@@ -1,7 +1,5 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
-
 interface Receipt {
   user_id: string;
   file_path: string;
@@ -9,14 +7,25 @@ interface Receipt {
   grocery_items: string[];
 }
 
-interface UploadResponse {
-  success: boolean;
-  items: any[];
-  total_items: number;
-  raw_text: string;
-  processing_time_ms: number;
+interface ReceiptsListProps {
+  receipts: Receipt[];
+  loading: boolean;
+  error: string | null;
+  uploading: boolean;
+  uploadError: string | null;
+  fileInputRef: React.RefObject<HTMLInputElement | null>;
+  handleFileUpload: (event: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
+export default function ReceiptsList({
+  receipts,
+  loading,
+  error,
+  uploading,
+  uploadError,
+  fileInputRef,
+  handleFileUpload,
+}: ReceiptsListProps) {
 export default function ReceiptsList({ userId }: { userId: string | null }) {
   const [receipts, setReceipts] = useState<Receipt[]>([]);
   const [loading, setLoading] = useState(true);

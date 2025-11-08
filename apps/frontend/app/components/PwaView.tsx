@@ -1,5 +1,38 @@
 "use client";
 
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import SignIn from './SignIn';
+import SignUp from './SignUp';
+import ReceiptsList from './ReceiptsList';
+
+interface GroceryItem {
+  id: number;
+  name: string;
+  completed: boolean;
+}
+
+interface Receipt {
+  user_id: string;
+  file_path: string;
+  raw_text: string;
+  grocery_items: string[];
+}
+
+interface ParsedGroceryItem {
+  description: string;
+  quantity: number;
+  price: number;
+}
+
+interface UploadResponse {
+  success: boolean;
+  items: ParsedGroceryItem[];
+  total_items: number;
+  raw_text: string;
+  processing_time_ms: number;
+}
+
 import { useState, useEffect } from 'react';
 import AuthIntro from './AuthIntro';
 import AuthForm from './AuthForm';
@@ -8,6 +41,56 @@ import ReceiptsList from './ReceiptsList';
 
 export default function PwaView() {
   const [signedIn, setSignedIn] = useState(false);
+  const [showSignIn, setShowSignIn] = useState(true);
+
+  const [receipts, setReceipts] = useState<Receipt[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const fetchReceipts = async () => {
+      const token = localStorage.getItem('access_token');
+      
+      if (!token) {
+        setError('No access token found. Please sign in again.');
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const response = await fetch('http://localhost:8000/api/receipts/', {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.detail || 'Failed to fetch receipts');
+        }
+
+        const data = await response.json();
+        
+        setReceipts(data);
+        setError(null);
+      } catch (err) {
+        const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
+        console.error('Error fetching receipts:', err);
+        setError(errorMessage);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (signedIn) {
+      fetchReceipts();
+    }
+  }, [signedIn]);
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
@@ -91,6 +174,72 @@ export default function PwaView() {
     setAuthView(authView === 'signin' ? 'signup' : 'signin');
   };
 
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setUploadError('No access token found. Please sign in again.');
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await fetch('http://localhost:8000/api/receipt/upload', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || 'Failed to upload receipt');
+      }
+
+      const data: UploadResponse = await response.json();
+      
+      if (data.success) {
+        const newItems = data.items.map((item: ParsedGroceryItem) => ({
+          id: Math.random(),
+          name: item.description,
+          completed: false,
+        }));
+        setItems([...items, ...newItems]);
+      }
+
+      const receiptsResponse = await fetch('http://localhost:8000/api/receipts/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (receiptsResponse.ok) {
+        const receiptsData = await receiptsResponse.json();
+        setReceipts(receiptsData);
+      }
+
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
+      console.error('Error uploading receipt:', err);
+      setUploadError(errorMessage);
+    } finally {
+      setUploading(false);
+    }
+  };
+
   if (!signedIn) {
     if (authView === 'intro') {
       return <AuthIntro onSignInClick={handleSignInClick} onSignUpClick={handleSignUpClick} />;
@@ -129,6 +278,15 @@ export default function PwaView() {
           </button>
         </header>
 
+        <ReceiptsList 
+          receipts={receipts}
+          loading={loading}
+          error={error}
+          uploading={uploading}
+          uploadError={uploadError}
+          fileInputRef={fileInputRef}
+          handleFileUpload={handleFileUpload}
+        />
         <IngredientsList userId={currentUserId} />
         <ReceiptsList userId={currentUserId} />
       </main>

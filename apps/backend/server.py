@@ -22,7 +22,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-receipt_parser = ReceiptParser()
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -83,6 +83,7 @@ async def upload_receipt(file: UploadFile = File(...), current_user: User = Depe
             )
 
         try:
+            receipt_parser = ReceiptParser(user_id=current_user.id)
             items = receipt_parser.parse_receipt_text(ocr_text)
         except Exception as e:
             raise HTTPException(
@@ -92,25 +93,7 @@ async def upload_receipt(file: UploadFile = File(...), current_user: User = Depe
 
         # Persist extracted items to groceries collection (best-effort)
         try:
-            from datetime import datetime, timezone
-            from bson import ObjectId
-            from database import get_groceries_collection
-            col = get_groceries_collection()
-            user_oid = ObjectId(current_user.id)
-            docs = []
-            now = datetime.now(timezone.utc)
-            for i in items:
-                if isinstance(i, dict) and "name" in i:
-                    docs.append({
-                        "user_id": user_oid,
-                        "name": str(i.get("name")),
-                        # Without model, we can't infer perish range; leave None
-                        "perish_min_days": None,
-                        "perish_max_days": None,
-                        "created_at": now,
-                    })
-            if docs:
-                col.insert_many(docs)
+            receipt_parser.add_groceries_to_db(items)
         except Exception:
             # Don't fail the request if persistence fails; just continue and return OCR result
             pass

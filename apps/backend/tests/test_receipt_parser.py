@@ -23,7 +23,7 @@ class TestReceiptParser(unittest.TestCase):
             mock_config.LLM_MODEL = "gemini-pro"
             mock_config.LLM_MAX_TOKENS = "2048"
             mock_config.LLM_TEMPERATURE = "0.7"
-            self.parser = ReceiptParser(user_id="test_user")
+            self.parser = ReceiptParser(user_id="507f1f77bcf86cd799439011")
 
     def tearDown(self):
         self.patcher.stop()
@@ -64,7 +64,7 @@ class TestReceiptParser(unittest.TestCase):
         self.assertEqual(parsed_items[2]["name"], "Bread")
         self.assertIsInstance(parsed_items[0]["min_days"], int)
         self.assertIsInstance(parsed_items[0]["max_days"], int)
-        self.assertIn("USER_ID: test_user", self.parser._build_prompt(ocr_text))
+        self.assertIn("USER_ID: 507f1f77bcf86cd799439011", self.parser._build_prompt(ocr_text))
 
 
     def test_parse_receipt_text_empty_input(self):
@@ -92,6 +92,26 @@ class TestReceiptParser(unittest.TestCase):
 
         parsed_items = self.parser.parse_receipt_text(ocr_text)
         self.assertEqual(parsed_items, [])
+
+    def test_add_groceries_to_db(self):
+        items = [
+            {"name": "Milk", "min_days": 5, "max_days": 7},
+            {"name": "Apple", "min_days": 10, "max_days": 14},
+        ]
+
+        with patch('database.get_groceries_collection') as mock_get_collection:
+            mock_collection = MagicMock()
+            mock_get_collection.return_value = mock_collection
+
+            self.parser.add_groceries_to_db(items)
+
+            self.assertEqual(mock_collection.insert_many.call_count, 1)
+            # Get the arguments passed to insert_many
+            inserted_docs = mock_collection.insert_many.call_args[0][0]
+            self.assertEqual(len(inserted_docs), 2)
+            self.assertEqual(inserted_docs[0]["name"], "Milk")
+            self.assertEqual(inserted_docs[1]["name"], "Apple")
+
 
 if __name__ == '__main__':
     unittest.main()

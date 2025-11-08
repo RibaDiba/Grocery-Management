@@ -24,14 +24,16 @@ from database import get_groceries_collection, get_user_collection
 router = APIRouter(prefix="/api/groceries", tags=["groceries"])
 
 
+from pydantic import BaseModel, Field, field_validator
+
 class GroceryCreate(BaseModel):
     name: str = Field(..., min_length=1, description="Name of the grocery item")
     min_days: Optional[int] = Field(None, ge=0, description="Minimum days before item perishes")
-    ax_days: Optional[int] = Field(None, ge=0, description="Maximum days before item perishes")
+    max_days: Optional[int] = Field(None, ge=0, description="Maximum days before item perishes")
 
-    @validator("max_days")
+    @field_validator("max_days")
     def validate_range(cls, v, values):
-        min_v = values.get("min_days")
+        min_v = values.data.get("min_days")
         if v is not None and min_v is not None and v < min_v:
             raise ValueError("max_days cannot be less than min_days")
         return v

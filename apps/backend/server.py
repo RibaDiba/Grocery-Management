@@ -9,11 +9,13 @@ from ocr import ocr_image, check_tesseract_available
 from receipt_parser import ReceiptParser
 from auth import router as auth_router, get_current_user, User
 from groceries import router as groceries_router
+from receipts import router as receipts_router
 
 
 app = FastAPI(title="grocery-backend")
 app.include_router(auth_router)
 app.include_router(groceries_router)
+app.include_router(receipts_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 
@@ -71,51 +73,61 @@ async def upload_receipt(file: UploadFile = File(...), current_user: User = Depe
         validate_file(file)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    file_path = None
+    
+    file_path = save_upload_file(file, current_user.id)
     try:
-        file_path = save_upload_file(file)
-        try:
-            ocr_text = ocr_image(file_path, preprocess=config.OCR_PREPROCESS_METHOD)
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"OCR processing failed: {str(e)}"
-            )
+        ocr_text = ocr_image(file_path, preprocess=config.OCR_PREPROCESS_METHOD)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"OCR processing failed: {str(e)}"
+        )
 
-        try:
-            receipt_parser = ReceiptParser(user_id=current_user.id)
-            items = receipt_parser.parse_receipt_text(ocr_text)
-        except Exception as e:
-            raise HTTPException(
-                status_code=500,
-                detail=f"Receipt parsing failed: {str(e)}"
-            )
+    try:
+        receipt_parser = ReceiptParser(user_id=current_user.id)
+        items = receipt_parser.parse_receipt_text(ocr_text)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Receipt parsing failed: {str(e)}"
+        )
 
-        # Persist extracted items to groceries collection (best-effort)
-        try:
-            receipt_parser.add_groceries_to_db(items)
-        except Exception:
-            # Don't fail the request if persistence fails; just continue and return OCR result
-            pass
+    grocery_item_ids = []
+    # Persist extracted items to groceries collection (best-effort)
+    try:
+        grocery_item_ids = receipt_parser.add_groceries_to_db(items)
+    except Exception:
+        # Don't fail the request if persistence fails; just continue and return OCR result
+        pass
 
-        processing_time_ms = int((time.time() - start_time) * 1000)
+    # Create receipt document
+    try:
+        from database import get_receipts_collection
+        from models import Receipt
+        receipts_col = get_receipts_collection()
+        receipt = Receipt(
+            user_id=current_user.id,
+            file_path=str(file_path),
+            raw_text=ocr_text,
+            grocery_items=grocery_item_ids
+        )
+        receipts_col.insert_one(receipt.dict())
+    except Exception:
+        # Don't fail the request if persistence fails
+        pass
 
-        response_data = {
-            "success": True,
-            "items": items,
-            "total_items": len(items),
-            "raw_text": ocr_text,
-            "processing_time_ms": processing_time_ms
-        }
-        
-        return JSONResponse(content=response_data)
-        
-    finally:
-        if file_path and file_path.exists():
-            try:
-                file_path.unlink()
-            except Exception:
-                pass 
+
+    processing_time_ms = int((time.time() - start_time) * 1000)
+
+    response_data = {
+        "success": True,
+        "items": items,
+        "total_items": len(items),
+        "raw_text": ocr_text,
+        "processing_time_ms": processing_time_ms
+    }
+    
+    return JSONResponse(content=response_data)
 
 
 def validate_file(file: UploadFile) -> None:
@@ -134,11 +146,15 @@ def validate_file(file: UploadFile) -> None:
         )
 
 
-def save_upload_file(file: UploadFile) -> Path:
+def save_upload_file(file: UploadFile, user_id: str) -> Path:
     timestamp = int(time.time() * 1000)
     file_ext = Path(file.filename).suffix
     filename = f"receipt_{timestamp}{file_ext}"
-    file_path = config.UPLOAD_DIR / filename
+    
+    user_receipt_dir = config.UPLOAD_DIR / "receipts" / user_id
+    user_receipt_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_path = user_receipt_dir / filename
 
     with open(file_path, "wb") as f:
         content = file.file.read()

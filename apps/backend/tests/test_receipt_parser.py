@@ -101,9 +101,10 @@ class TestReceiptParser(unittest.TestCase):
 
         with patch('database.get_groceries_collection') as mock_get_collection:
             mock_collection = MagicMock()
+            mock_collection.insert_many.return_value.inserted_ids = ["id1", "id2"]
             mock_get_collection.return_value = mock_collection
 
-            self.parser.add_groceries_to_db(items)
+            inserted_ids = self.parser.add_groceries_to_db(items)
 
             self.assertEqual(mock_collection.insert_many.call_count, 1)
             # Get the arguments passed to insert_many
@@ -111,6 +112,7 @@ class TestReceiptParser(unittest.TestCase):
             self.assertEqual(len(inserted_docs), 2)
             self.assertEqual(inserted_docs[0]["name"], "Milk")
             self.assertEqual(inserted_docs[1]["name"], "Apple")
+            self.assertEqual(inserted_ids, ["id1", "id2"])
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 
 interface ReceiptItem {
   name?: string;
@@ -119,6 +119,17 @@ export function useReceiptUpload(): UseReceiptUploadReturn {
       }
     }
   };
+
+  // Auto-clear success message after 4 seconds
+  useEffect(() => {
+    if (uploadSuccess && uploadResult) {
+      const timer = setTimeout(() => {
+        resetUpload();
+      }, 4000);
+      
+      return () => clearTimeout(timer);
+    }
+  }, [uploadSuccess, uploadResult]);
 
   const resetUpload = () => {
     setUploadError(null);

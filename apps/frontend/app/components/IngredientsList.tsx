@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import IngredientCard from './IngredientCard';
+import { IngredientSkeleton } from './SkeletonLoader';
 
 interface GroceryItem {
   id: string;
@@ -144,11 +145,7 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
   }, [uniqueIngredients]);
 
   if (loading) {
-    return (
-      <div className="mt-8 w-full">
-        <p className="text-gray-700">Loading ingredients...</p>
-      </div>
-    );
+    return <IngredientSkeleton />;
   }
 
   if (error) {

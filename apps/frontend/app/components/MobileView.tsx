@@ -129,7 +129,7 @@ export default function MobileView() {
       <header className="w-full flex items-center justify-between px-4 py-4 bg-transparent">
         <div className="flex items-center gap-3">
           <img 
-            src="/PantryPiolotLogo.png" 
+            src="/PantryPilotLogo.png" 
             alt="PantryPilot Logo" 
             className="h-10 w-auto"
           />
@@ -341,7 +341,7 @@ export default function MobileView() {
           boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)'
         }}
       >
-        <button type="button" onClick={() => setShowCalendar(true)} className="flex flex-col items-center gap-1">
+        <button type="button" onClick={() => router.push('/calendar')} className="flex flex-col items-center gap-1">
           <svg 
             className="w-6 h-6" 
             fill="none" 

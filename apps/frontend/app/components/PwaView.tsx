@@ -83,7 +83,7 @@ export default function PwaView() {
       <header className="w-full flex items-center justify-between px-4 py-4 bg-transparent">
         <div className="flex items-center gap-3">
           <img 
-            src="/PantryPiolotLogo.png" 
+            src="/PantryPilotLogo.png" 
             alt="PantryPilot Logo" 
             className="h-10 w-auto"
           />
@@ -298,7 +298,7 @@ export default function PwaView() {
         <button
           type="button"
           onClick={() => {
-            setShowCalendar(true);
+            router.push('/calendar');
             setFabOpen(false);
           }}
           aria-pressed={calendarActive}
@@ -338,10 +338,9 @@ export default function PwaView() {
           </span>
         </button>
       </nav>
-      <CalendarOverlay isOpen={showCalendar} onClose={() => setShowCalendar(false)} token={userToken} />
-
+      
       <BottomNav 
-        onCalendarClick={() => setShowCalendar(true)}
+        onCalendarClick={() => router.push('/calendar')}
         onProfileClick={() => {}}
       />
     </div>

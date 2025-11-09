@@ -736,7 +736,7 @@ export default function IngredientsPage() {
       />
 
       <BottomNav 
-        onCalendarClick={() => setShowCalendar(true)}
+        onCalendarClick={() => router.push('/calendar')}
         onProfileClick={() => {}}
         color={COLORS.primary}
       />

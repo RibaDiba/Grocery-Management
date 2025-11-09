@@ -40,7 +40,7 @@ export default function AuthForm({
       <div className="w-full max-w-xs">
         <div className="mb-6 flex justify-center">
           <img 
-            src="/PantryPiolotLogo.png" 
+            src="/PantryPilotLogo.png" 
             alt="PantryPilot Logo" 
             className="h-16 w-auto"
             style={{ filter: 'none' }}

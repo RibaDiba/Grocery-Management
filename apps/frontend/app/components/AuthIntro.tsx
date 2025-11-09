@@ -19,7 +19,7 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
         {/* Logo */}
         <div className="mb-8 flex justify-center">
           <img 
-            src="/PantryPiolotLogo.png" 
+            src="/PantryPilotLogo.png" 
             alt="PantryPilot Logo" 
             className="h-24 w-auto sm:h-32"
             style={{ filter: 'none' }}

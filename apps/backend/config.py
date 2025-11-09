@@ -56,7 +56,7 @@ class Config:
     LLM_MODEL: str = _env_str("LLM_MODEL", "")
     LLM_MAX_TOKENS: int | None = _env_int("LLM_MAX_TOKENS", None)
     LLM_TEMPERATURE: float | None = _env_float("LLM_TEMPERATURE", None)
-    
+
     @classmethod
     def validate(cls) -> list[str]:
         errors = []

@@ -5,6 +5,7 @@ from server import app
 from database import get_db
 from auth_routes import router as auth_router
 
+
 @pytest.fixture
 def client():
     # Create a mock MongoDB client
@@ -32,6 +33,7 @@ def run_before_and_after_tests(client):
     yield
     db.users.delete_many({})
 
+
 def test_register_user_success(client):
     response = client.post(
         "/auth/register",
@@ -40,6 +42,7 @@ def test_register_user_success(client):
     assert response.status_code == 200
     assert response.json()["username"] == "testuser"
     assert response.json()["email"] == "test@example.com"
+
 
 def test_register_user_duplicate_username(client):
     client.post(
@@ -53,6 +56,7 @@ def test_register_user_duplicate_username(client):
     assert response.status_code == 400
     assert response.json()["detail"] == "Username already registered"
 
+
 def test_register_user_duplicate_email(client):
     client.post(
         "/auth/register",
@@ -64,6 +68,7 @@ def test_register_user_duplicate_email(client):
     )
     assert response.status_code == 400
     assert response.json()["detail"] == "Email already registered"
+
 
 def test_login_success(client):
     client.post(
@@ -79,6 +84,7 @@ def test_login_success(client):
     assert "access_token" in json_response
     assert json_response["token_type"] == "bearer"
 
+
 def test_login_incorrect_password(client):
     client.post(
         "/auth/register",
@@ -91,6 +97,7 @@ def test_login_incorrect_password(client):
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect username or password"
 
+
 def test_login_nonexistent_username(client):
     response = client.post(
         "/auth/login",
@@ -98,6 +105,7 @@ def test_login_nonexistent_username(client):
     )
     assert response.status_code == 401
     assert response.json()["detail"] == "Incorrect username or password"
+
 
 def test_register_user_long_password(client):
     long_password = "a" * 72

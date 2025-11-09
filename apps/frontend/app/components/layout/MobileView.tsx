@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import AuthIntro from '../auth/AuthIntro';
 import AuthForm from '../auth/AuthForm';
 import IngredientsList from '../ingredients/IngredientsList';
+import ExpiringSoonList from '../ingredients/ExpiringSoonList';
 import RecipesList from '../recipes/RecipesList';
 import { useReceiptUpload } from '../../hooks/useReceiptUpload';
 import { IngredientSkeleton } from '../common/SkeletonLoader';
@@ -153,13 +154,14 @@ export default function MobileView() {
 
       {/* Hello User Text */}
       <div className="px-4 pb-2">
-        <p className="text-lg font-medium" style={{ color: '#354A33' }}>
+        <p className="text-3xl font-medium" style={{ color: '#354A33' }}>
           Hello {currentUsername || 'User'},
         </p>
       </div>
 
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-20">
+      <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-28">
         <IngredientsList userId={currentUserId} selectedWeekRange={selectedWeekRange} />
+        <ExpiringSoonList userId={currentUserId} onUploadClick={handleFileSelect} onFileChange={handleFileChange} />
         <RecipesList />
       </main>
 

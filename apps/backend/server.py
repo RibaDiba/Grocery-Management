@@ -96,9 +96,9 @@ async def upload_receipt(file: UploadFile = File(...), current_user: User = Depe
     # Persist extracted items to groceries collection (best-effort)
     try:
         grocery_item_ids = receipt_parser.add_groceries_to_db(items)
-    except Exception:
+    except Exception as e:
         # Don't fail the request if persistence fails; just continue and return OCR result
-        pass
+        print(f"Warning: failed to persist groceries: {e}")
 
     # Create receipt document
     try:
@@ -112,9 +112,9 @@ async def upload_receipt(file: UploadFile = File(...), current_user: User = Depe
             grocery_items=grocery_item_ids
         )
         receipts_col.insert_one(receipt.dict())
-    except Exception:
+    except Exception as e:
         # Don't fail the request if persistence fails
-        pass
+        print(f"Warning: failed to persist receipt doc: {e}")
 
 
     processing_time_ms = int((time.time() - start_time) * 1000)

@@ -1,10 +1,12 @@
 import pytest
 from mongomock import MongoClient
 from auth import get_password_hash, verify_password, create_access_token, get_current_user
+from database import get_user_collection
 from models import User
 from jose import jwt
 from config import config
 from fastapi import HTTPException
+
 
 def test_password_hashing():
     password = "testpassword"
@@ -12,17 +14,20 @@ def test_password_hashing():
     assert hashed_password != password
     assert verify_password(password, hashed_password)
 
+
 def test_long_password_hashing():
     password = "a" * 72
     hashed_password = get_password_hash(password)
     assert hashed_password != password
     assert verify_password(password, hashed_password)
 
+
 def test_create_access_token():
     data = {"sub": "testuser"}
     token = create_access_token(data)
     decoded_token = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
     assert decoded_token["sub"] == "testuser"
+
 
 @pytest.mark.asyncio
 async def test_get_current_user():
@@ -41,6 +46,7 @@ async def test_get_current_user():
     user = await get_current_user(token=token)
     assert user.username == username
     app.dependency_overrides = {}
+
 
 @pytest.mark.asyncio
 async def test_get_current_user_invalid_token():

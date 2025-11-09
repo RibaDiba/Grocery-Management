@@ -138,15 +138,19 @@ class ReceiptParser:
 
         col = get_groceries_collection()
         user_oid = ObjectId(self.user_id)
-        docs: list[dict[str, Any]] = []
         now = datetime.now(timezone.utc)
+        from pymongo import ReturnDocument
+
+        inserted_ids: list[str] = []
 
         for i in items:
             if not (isinstance(i, dict) and "name" in i):
                 continue
 
             name = str(i.get("name"))
-            doc: dict[str, Any] = {
+
+            # Prepare the document fields to set when inserting a new grocery
+            set_on_insert: dict[str, Any] = {
                 "user_id": user_oid,
                 "name": name,
                 "created_at": now,
@@ -156,19 +160,27 @@ class ReceiptParser:
             max_raw = i.get("max_days")
             if min_raw is not None and max_raw is not None:
                 try:
-                    doc["min_days"] = int(min_raw)
-                    doc["max_days"] = int(max_raw)
+                    set_on_insert["min_days"] = int(min_raw)
+                    set_on_insert["max_days"] = int(max_raw)
                 except (TypeError, ValueError):
-                    # Invalid perish info -> omit those fields (treat as non-perishable)
                     pass
 
-            docs.append(doc)
+            # Atomically increment count and create doc if missing; return the doc after update
+            try:
+                updated = col.find_one_and_update(
+                    {"user_id": user_oid, "name": name},
+                    {"$inc": {"count": 1}, "$setOnInsert": set_on_insert},
+                    upsert=True,
+                    return_document=ReturnDocument.AFTER,
+                )
+            except Exception as e:
+                print(f"Error updating/inserting grocery item '{name}': {e}")
+                updated = None
 
-        if not docs:
-            return []
+            if updated and updated.get("_id"):
+                inserted_ids.append(str(updated.get("_id")))
 
-        result = col.insert_many(docs)
-        return [str(id) for id in result.inserted_ids]
+        return inserted_ids
 
     def _parse_response(self, response_text: str) -> list[dict[str, Any]]:
         """Extract and validate JSON array from model output.

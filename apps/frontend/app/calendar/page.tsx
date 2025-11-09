@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from 'next/navigation';
-import CalendarOverlay from '../components/CalendarOverlay';
+import CalendarOverlay from '../components/calendar/CalendarOverlay';
 
 export default function CalendarPage() {
   const router = useRouter();

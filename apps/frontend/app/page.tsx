@@ -1,9 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import DesktopView from './components/DesktopView';
-import MobileView from './components/MobileView';
-import PwaView from './components/PwaView';
+import DesktopView from './components/layout/DesktopView';
+import MobileView from './components/layout/MobileView';
+import PwaView from './components/layout/PwaView';
 
 export default function Home() {
   const [view, setView] = useState<'loading' | 'desktop' | 'mobile' | 'pwa'>(() => {

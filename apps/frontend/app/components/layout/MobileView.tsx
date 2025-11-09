@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import AuthIntro from './AuthIntro';
-import AuthForm from './AuthForm';
-import IngredientsList from './IngredientsList';
-import RecipesList from './RecipesList';
-import { useReceiptUpload } from '../hooks/useReceiptUpload';
-import { IngredientSkeleton } from './SkeletonLoader';
-import SuccessPopup from './SuccessPopup';
-import CalendarOverlay, { type WeekSelection } from './CalendarOverlay';
+import AuthIntro from '../auth/AuthIntro';
+import AuthForm from '../auth/AuthForm';
+import IngredientsList from '../ingredients/IngredientsList';
+import RecipesList from '../recipes/RecipesList';
+import { useReceiptUpload } from '../../hooks/useReceiptUpload';
+import { IngredientSkeleton } from '../common/SkeletonLoader';
+import SuccessPopup from '../common/SuccessPopup';
+import CalendarOverlay, { type WeekSelection } from '../calendar/CalendarOverlay';
 
 export default function MobileView() {
   const router = useRouter();

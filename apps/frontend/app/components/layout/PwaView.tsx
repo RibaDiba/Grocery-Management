@@ -5,7 +5,6 @@ import { useRouter } from 'next/navigation';
 import AuthIntro from '../auth/AuthIntro';
 import AuthForm from '../auth/AuthForm';
 import IngredientsList from '../ingredients/IngredientsList';
-import ExpiringSoonList from '../ingredients/ExpiringSoonList';
 import RecipesList from '../recipes/RecipesList';
 import CalendarOverlay, { type WeekSelection } from '../calendar/CalendarOverlay';
 
@@ -160,7 +159,9 @@ export default function PwaView() {
     <div 
       className="flex min-h-screen flex-col font-sans"
       style={{
-        background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)'
+        background: 'linear-gradient(to bottom, #CBDFC9 0%, #95C590 100%)',
+        backgroundAttachment: 'fixed',
+        minHeight: '100vh'
       }}
     >
       {/* Main Navigation Bar */}
@@ -187,7 +188,6 @@ export default function PwaView() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-28">
         <IngredientsList userId={currentUserId} selectedWeekRange={selectedWeekRange} />
-        <ExpiringSoonList userId={currentUserId} />
         <RecipesList />
       </main>
 

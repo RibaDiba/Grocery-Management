@@ -84,40 +84,54 @@ export default function RecipePage() {
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-4 py-8">
-      <div className="mb-6">
-        <Link href="/recipes" className="text-sm text-gray-600 hover:underline flex items-center gap-1">
-          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-          </svg>
-          Back to Recipes
-        </Link>
-      </div>
+    <main className="min-h-screen" style={{ background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)' }}>
+      <div className="w-full max-w-3xl mx-auto px-4 py-6">
+        <div className="mb-4">
+          <Link
+            href="/recipes"
+            className="inline-flex items-center gap-1 rounded-md px-3 py-1.5 bg-white border text-sm font-medium hover:bg-black/5"
+            style={{ color: '#354A33', borderColor: '#354A33' }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-4 h-4">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+            Back to Recipes
+          </Link>
+        </div>
 
-      <div className="bg-[rgba(240,253,244,0.8)] backdrop-blur-lg rounded-xl border border-white/30 shadow-lg p-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">{recipe.title}</h1>
+        <h1 className="text-2xl font-semibold mb-1" style={{ color: '#354A33' }}>{recipe.title}</h1>
         {recipe.estimated_minutes > 0 && (
-          <p className="text-sm text-gray-500 mb-6">{recipe.estimated_minutes} minutes cook time</p>
+          <p className="text-xs mb-4" style={{ color: 'rgba(31,42,28,0.75)' }}>~{recipe.estimated_minutes} minutes</p>
         )}
 
-        <div className="mb-8">
-          <h2 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Ingredients</h2>
-          <ul className="list-disc pl-5 mt-4 space-y-2 text-gray-700">
+        <section 
+          className="mt-4 mb-4 rounded-lg p-3"
+          style={{ backgroundColor: '#E8F5E9', boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)' }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold" style={{ color: '#354A33' }}>Ingredients</h2>
+          </div>
+          <ul className="list-disc pl-5 text-sm space-y-2" style={{ color: '#1F2A1C' }}>
             {recipe.ingredients.map((ingredient, index) => (
               <li key={index}>{ingredient}</li>
             ))}
           </ul>
-        </div>
+        </section>
 
-        <div>
-          <h2 className="text-lg font-semibold text-gray-800 mb-3 border-b pb-2">Instructions</h2>
-          <ol className="list-decimal pl-5 mt-4 space-y-4 text-gray-700 leading-relaxed">
+        <section 
+          className="mt-2 mb-6 rounded-lg p-3"
+          style={{ backgroundColor: '#E8F5E9', boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)' }}
+        >
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-lg font-semibold" style={{ color: '#354A33' }}>Instructions</h2>
+          </div>
+          <ol className="list-decimal pl-5 space-y-3 text-sm leading-relaxed" style={{ color: '#1F2A1C' }}>
             {recipe.steps.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
           </ol>
-        </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 }

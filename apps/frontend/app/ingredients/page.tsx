@@ -6,6 +6,7 @@ import { ArrowLeft, Search, Filter, AlertCircle, CheckCircle, Minus, Plus } from
 import { IngredientSkeleton } from '../components/common/SkeletonLoader';
 import { Checkbox } from '../../components/ui/checkbox';
 import CalendarOverlay from '../components/calendar/CalendarOverlay';
+import EmptyGroceriesState from '../components/groceries/EmptyGroceriesState';
 
 interface GroceryItem {
   id: string;
@@ -643,9 +644,16 @@ export default function IngredientsPage() {
             Error: {error}
           </div>
         ) : sorted.length === 0 ? (
-          <div className="p-6 text-center text-sm" style={{ color: COLORS.secondary }}>
-            No ingredients found.
-          </div>
+          <EmptyGroceriesState 
+            onAddManually={() => {
+              // Trigger manual input - this could be connected to parent component
+              window.dispatchEvent(new CustomEvent('openManualInput'));
+            }}
+            onUploadReceipt={() => {
+              // Trigger file upload - this could be connected to parent component
+              window.dispatchEvent(new CustomEvent('openFileUpload'));
+            }}
+          />
         ) : (
           <div style={{ borderColor: COLORS.light }} className="divide-y">
             {sorted.map((ingredient) => {

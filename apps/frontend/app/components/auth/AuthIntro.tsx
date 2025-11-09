@@ -18,11 +18,7 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
       <div className="w-full max-w-md text-center">
         {/* Logo */}
         <div className="mb-8 flex justify-center">
-          <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-white/80 shadow-inner flex items-center justify-center">
-            <span className="text-3xl font-semibold tracking-wide" style={{ color: '#2D5016' }}>
-              PP
-            </span>
-          </div>
+          <img src="/PantryPilotLogo.png" alt="" />
         </div>
 
         {/* Heading */}
@@ -38,11 +34,11 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
           className="mb-12 text-lg leading-relaxed sm:text-xl"
           style={{ color: '#4A614F' }}
         >
-          Track groceries. Help prevent food waste.  
+          Track groceries. Personalized.  
         </p>
         
         {/* Buttons with Different Colors */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 mx-5">
           <button
             onClick={onSignInClick}
             className="w-full rounded-full px-8 py-4 text-lg font-semibold transition-all hover:scale-105 hover:shadow-lg active:scale-95"

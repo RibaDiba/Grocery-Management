@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import IngredientCard from './IngredientCard';
 import { IngredientSkeleton } from '../common/SkeletonLoader';
 import { type WeekSelection } from '../calendar/CalendarOverlay';
+import EmptyIngredientsCard from './EmptyIngredientsCard';
 
 interface GroceryItem {
   id: string;
@@ -185,14 +186,11 @@ export default function IngredientsList({ userId, selectedWeekRange = null }: In
   const headerTitle = hasSelection
     ? `Groceries`
     : 'Groceries';
-  const emptyStateMessage = hasSelection
-    ? 'No groceries found. Upload a receipt to get started!'
-    : 'No groceries found. Upload a receipt to get started!';
 
   return (
     <div className="mt-6 w-full">
       {sortedIngredients.length === 0 ? (
-        <p className="text-gray-600">{emptyStateMessage}</p>
+        <EmptyIngredientsCard />
       ) : (
         <div 
           className="rounded-lg p-3"

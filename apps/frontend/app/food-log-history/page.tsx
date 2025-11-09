@@ -71,7 +71,7 @@ export default function FoodLogHistoryPage() {
     return (
       <div 
         className="min-h-screen flex items-center justify-center"
-        style={{ backgroundColor: '#E8F5E9' }}
+        style={{ background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)' }}
       >
         <p style={{ color: '#2D5016' }}>Loading...</p>
       </div>
@@ -81,7 +81,7 @@ export default function FoodLogHistoryPage() {
   return (
     <div 
       className="min-h-screen flex flex-col pb-20"
-      style={{ backgroundColor: '#E8F5E9' }}
+      style={{ background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)' }}
     >
       {/* Header */}
       <div className="pt-16 pb-5 px-5">

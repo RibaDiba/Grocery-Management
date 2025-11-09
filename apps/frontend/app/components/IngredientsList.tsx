@@ -184,10 +184,10 @@ export default function IngredientsList({ userId, selectedWeekRange = null }: In
   const hasSelection = Boolean(selectedWeekRange);
   const headerTitle = hasSelection
     ? `Groceries expiring week of ${selectedWeekRange?.label ?? ''}`
-    : 'Ingredients about to go bad';
+    : 'Groceries about to go bad';
   const emptyStateMessage = hasSelection
     ? 'No groceries expiring in this week.'
-    : 'No ingredients found. Upload receipts to add ingredients.';
+    : 'No groceries found. Upload a receipt to get started!';
 
   return (
     <div className="mt-6 w-full">

@@ -62,6 +62,13 @@ const formatFullDate = (date: Date) => {
   });
 };
 
+const toDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, '0');
+  const day = `${date.getDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 const toExpiryDate = (item: GroceryItem): Date => {
   const created = new Date(item.created_at);
   if (Number.isFinite(item.max_days)) {
@@ -265,6 +272,14 @@ export default function CalendarOverlay({
     return selectedWeekItems.filter((item) => item.name.toLowerCase().includes(normalized));
   }, [selectedWeekItems, searchTerm]);
 
+  const weekExpiryDaySet = useMemo(() => {
+    const set = new Set<string>();
+    selectedWeekItems.forEach((item) => {
+      set.add(toDateKey(item.expiryDate));
+    });
+    return set;
+  }, [selectedWeekItems]);
+
   const noWeekItems = !itemsLoading && !itemsError && selectedWeekItems.length === 0;
   const noSearchResults =
     !itemsLoading &&
@@ -442,6 +457,10 @@ export default function CalendarOverlay({
                       selectedDate.getMonth() === visibleMonth.getMonth() &&
                       selectedDate.getDate() === cell;
 
+                    const dayDate =
+                      cell !== null ? new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), cell) : null;
+                    const showExpiryDot = dayDate ? weekExpiryDaySet.has(toDateKey(dayDate)) : false;
+
                     return (
                       <div key={`${cell ?? 'blank'}-${cellIndex}`} className="relative flex justify-center py-1">
                         <button
@@ -456,6 +475,12 @@ export default function CalendarOverlay({
                         >
                           {cell ?? ''}
                         </button>
+                        {showExpiryDot && (
+                          <span
+                            className="absolute -bottom-0.5 h-1.5 w-1.5 rounded-full"
+                            style={{ backgroundColor: '#C53030' }}
+                          />
+                        )}
                       </div>
                     );
                   })}

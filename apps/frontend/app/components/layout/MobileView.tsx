@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import AuthIntro from '../auth/AuthIntro';
 import AuthForm from '../auth/AuthForm';
 import IngredientsList from '../ingredients/IngredientsList';
 import ExpiringSoonList from '../ingredients/ExpiringSoonList';
 import RecipesList from '../recipes/RecipesList';
 import CalendarOverlay, { type WeekSelection } from '../calendar/CalendarOverlay';
+import { useReceiptUpload } from '../../hooks/useReceiptUpload';
 
 export default function MobileView() {
-  const router = useRouter();
   const [signedIn, setSignedIn] = useState(false);
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
@@ -18,6 +17,7 @@ export default function MobileView() {
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedWeekRange, setSelectedWeekRange] = useState<WeekSelection | null>(null);
+  const { handleFileChange } = useReceiptUpload();
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -157,7 +157,7 @@ export default function MobileView() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-28">
         <IngredientsList userId={currentUserId} selectedWeekRange={selectedWeekRange} />
-        <ExpiringSoonList userId={currentUserId} onUploadClick={handleFileSelect} onFileChange={handleFileChange} />
+        <ExpiringSoonList userId={currentUserId} onFileChange={handleFileChange} />
         <RecipesList />
       </main>
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import AuthIntro from './AuthIntro';
 import AuthForm from './AuthForm';
 import IngredientsList from './IngredientsList';
@@ -11,6 +12,7 @@ import SuccessPopup from './SuccessPopup';
 import CalendarOverlay, { type WeekSelection } from './CalendarOverlay';
 
 export default function PwaView() {
+  const router = useRouter();
   const [signedIn, setSignedIn] = useState(false);
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
@@ -99,6 +101,8 @@ export default function PwaView() {
   const handleSwitchMode = () => {
     setAuthView(authView === 'signin' ? 'signup' : 'signin');
   };
+
+  const calendarActive = showCalendar;
 
   if (!signedIn) {
     if (authView === 'intro') {
@@ -339,19 +343,35 @@ export default function PwaView() {
           boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)'
         }}
       >
-        <button type="button" onClick={() => setShowCalendar(true)} className="flex flex-col items-center gap-1">
+        <button
+          type="button"
+          onClick={() => {
+            setShowCalendar(true);
+            setFabOpen(false);
+          }}
+          aria-pressed={calendarActive}
+          className={`flex flex-col items-center gap-1 rounded-full px-4 py-2 transition-colors ${
+            calendarActive ? 'bg-[#E6F2E4]' : 'hover:bg-black/5'
+          }`}
+        >
           <svg 
             className="w-6 h-6" 
             fill="none" 
             stroke="currentColor" 
             viewBox="0 0 24 24"
-            style={{ color: '#354A33' }}
+            style={{ color: calendarActive ? '#1F2A1C' : '#354A33' }}
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
-          <span className="text-xs" style={{ color: '#354A33' }}>Calendar</span>
+          <span className="text-xs font-medium" style={{ color: calendarActive ? '#1F2A1C' : '#354A33' }}>
+            Calendar
+          </span>
         </button>
-        <button className="flex flex-col items-center gap-1">
+        <button
+          type="button"
+          onClick={() => router.push('/profile')}
+          className="flex flex-col items-center gap-1 rounded-full px-4 py-2 transition-colors hover:bg-black/5"
+        >
           <svg 
             className="w-6 h-6" 
             fill="none" 
@@ -361,7 +381,9 @@ export default function PwaView() {
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <span className="text-xs" style={{ color: '#354A33' }}>Profile</span>
+          <span className="text-xs font-medium" style={{ color: '#354A33' }}>
+            Profile
+          </span>
         </button>
       </nav>
     </div>

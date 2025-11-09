@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import IngredientCard from './IngredientCard';
 import { IngredientSkeleton } from './SkeletonLoader';
+import { type WeekSelection } from './CalendarOverlay';
 
 interface GroceryItem {
   id: string;
@@ -13,7 +14,30 @@ interface GroceryItem {
   created_at: string;
 }
 
-export default function IngredientsList({ userId }: { userId: string | null }) {
+interface IngredientsListProps {
+  userId: string | null;
+  selectedWeekRange?: WeekSelection | null;
+}
+
+const getExpirationDate = (item: GroceryItem): Date | null => {
+  if (item.max_days !== null && item.max_days !== undefined) {
+    const createdDate = new Date(item.created_at);
+    const expirationDate = new Date(createdDate);
+    expirationDate.setDate(expirationDate.getDate() + item.max_days);
+    return expirationDate;
+  }
+
+  if (item.min_days !== null && item.min_days !== undefined) {
+    const createdDate = new Date(item.created_at);
+    const expirationDate = new Date(createdDate);
+    expirationDate.setDate(expirationDate.getDate() + item.min_days);
+    return expirationDate;
+  }
+
+  return null;
+};
+
+export default function IngredientsList({ userId, selectedWeekRange = null }: IngredientsListProps) {
   const router = useRouter();
   const [ingredients, setIngredients] = useState<GroceryItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -109,27 +133,27 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
     );
   }, [ingredients]);
 
+  const filteredIngredients = useMemo(() => {
+    if (!selectedWeekRange) {
+      return uniqueIngredients;
+    }
+
+    const { start, end } = selectedWeekRange;
+
+    return uniqueIngredients.filter((item) => {
+      const expirationDate = getExpirationDate(item);
+      if (!expirationDate) {
+        return false;
+      }
+      const expirationTime = expirationDate.getTime();
+      return expirationTime >= start && expirationTime <= end;
+    });
+  }, [uniqueIngredients, selectedWeekRange]);
+
   // Sort ingredients by expiration date (closest to expiring first)
   // Must be called before conditional returns to follow Rules of Hooks
   const sortedIngredients = useMemo(() => {
-    const now = new Date();
-    
-    const sorted = [...uniqueIngredients].sort((a, b) => {
-      const getExpirationDate = (item: GroceryItem): Date | null => {
-        if (item.max_days !== null) {
-          const createdDate = new Date(item.created_at);
-          const expirationDate = new Date(createdDate);
-          expirationDate.setDate(expirationDate.getDate() + item.max_days);
-          return expirationDate;
-        } else if (item.min_days !== null) {
-          const createdDate = new Date(item.created_at);
-          const expirationDate = new Date(createdDate);
-          expirationDate.setDate(expirationDate.getDate() + item.min_days);
-          return expirationDate;
-        }
-        return null;
-      };
-
+    const sorted = [...filteredIngredients].sort((a, b) => {
       const expirationA = getExpirationDate(a);
       const expirationB = getExpirationDate(b);
 
@@ -142,9 +166,8 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
       return expirationA.getTime() - expirationB.getTime();
     });
     
-    // Return only top 3 ingredients
-    return sorted.slice(0, 3);
-  }, [uniqueIngredients]);
+    return selectedWeekRange ? sorted : sorted.slice(0, 3);
+  }, [filteredIngredients, selectedWeekRange]);
 
   if (loading) {
     return <IngredientSkeleton />;
@@ -158,10 +181,18 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
     );
   }
 
+  const hasSelection = Boolean(selectedWeekRange);
+  const headerTitle = hasSelection
+    ? `Groceries expiring week of ${selectedWeekRange?.label ?? ''}`
+    : 'Ingredients about to go bad';
+  const emptyStateMessage = hasSelection
+    ? 'No groceries expiring in this week.'
+    : 'No ingredients found. Upload receipts to add ingredients.';
+
   return (
     <div className="mt-6 w-full">
       {sortedIngredients.length === 0 ? (
-        <p className="text-gray-600">No ingredients found. Upload receipts to add ingredients.</p>
+        <p className="text-gray-600">{emptyStateMessage}</p>
       ) : (
         <div 
           className="rounded-lg p-3"
@@ -187,7 +218,7 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
               </svg>
               <h2 className="text-lg font-semibold" style={{ color: '#354A33' }}>
-                Ingredients about to go bad
+              {headerTitle}
               </h2>
             </div>
             {/* Arrow Icon */}

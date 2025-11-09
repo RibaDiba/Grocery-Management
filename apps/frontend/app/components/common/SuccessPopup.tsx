@@ -24,7 +24,7 @@ export default function SuccessPopup({
 
   return (
     <div 
-      className="fixed bottom-24 left-4 right-4 rounded-xl p-4 z-20 shadow-xl" 
+      className="fixed top-6 left-4 right-4 rounded-xl p-4 z-50 shadow-xl mx-auto max-w-xl" 
       style={{ 
         backgroundColor: '#E8F5E9',
         border: '1px solid #A5D6A7',

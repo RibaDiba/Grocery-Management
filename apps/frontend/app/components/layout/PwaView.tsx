@@ -7,7 +7,6 @@ import AuthForm from '../auth/AuthForm';
 import IngredientsList from '../ingredients/IngredientsList';
 import RecipesList from '../recipes/RecipesList';
 import { useReceiptUpload } from '../../hooks/useReceiptUpload';
-import { IngredientSkeleton } from '../common/SkeletonLoader';
 import SuccessPopup from '../common/SuccessPopup';
 import CalendarOverlay, { type WeekSelection } from '../calendar/CalendarOverlay';
 
@@ -128,6 +127,20 @@ export default function PwaView() {
   const handleSwitchMode = () => setAuthView(authView === 'signin' ? 'signup' : 'signin');
 
   const calendarActive = showCalendar;
+  const addReceiptLabel = uploading ? 'Uploading...' : 'Add Receipt';
+
+  const handleAddReceiptFromOverlay = () => {
+    if (uploading) return;
+    handleFileSelect();
+    setShowCalendar(false);
+    setFabOpen(false);
+  };
+
+  const handleViewProfile = () => {
+    router.push('/profile');
+    setShowCalendar(false);
+    setFabOpen(false);
+  };
 
   if (!signedIn) {
     if (authView === 'intro') {
@@ -359,6 +372,10 @@ export default function PwaView() {
         onClose={() => setShowCalendar(false)}
         token={userToken}
         onWeekSelect={setSelectedWeekRange}
+        onAddReceipt={handleAddReceiptFromOverlay}
+        addReceiptLabel={addReceiptLabel}
+        addReceiptDisabled={uploading}
+        onViewProfile={handleViewProfile}
       />
 
       {/* Bottom Navigation Bar */}
@@ -370,10 +387,7 @@ export default function PwaView() {
       >
         <button
           type="button"
-          onClick={() => {
-            router.push('/calendar');
-            setFabOpen(false);
-          }}
+          onClick={() => setShowCalendar(true)}
           aria-pressed={calendarActive}
           className={`flex flex-col items-center gap-1 rounded-full px-4 py-2 transition-colors ${
             calendarActive ? 'bg-[#E6F2E4]' : 'hover:bg-black/5'
@@ -390,6 +404,29 @@ export default function PwaView() {
           </svg>
           <span className="text-xs font-medium" style={{ color: calendarActive ? '#1F2A1C' : '#354A33' }}>
             Calendar
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (uploading) return;
+            handleFileSelect();
+            setFabOpen(false);
+          }}
+          disabled={uploading}
+          className="flex flex-col items-center gap-1 rounded-full px-4 py-2 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <span className="text-xs font-medium" style={{ color: '#354A33' }}>
+            {addReceiptLabel}
           </span>
         </button>
         <button

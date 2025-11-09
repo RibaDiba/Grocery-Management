@@ -204,7 +204,11 @@ def add_grocery(body: GroceryCreate, current_user: User = Depends(get_current_us
 
 
 @router.delete("/{grocery_id}", status_code=204)
-def delete_grocery(grocery_id: str, current_user: User = Depends(get_current_user)):
+def delete_grocery(
+    grocery_id: str,
+    by: int = 1,
+    current_user: User = Depends(get_current_user),
+):
     col = get_groceries_collection()
     user_oid = _object_id(current_user)
     try:
@@ -212,14 +216,18 @@ def delete_grocery(grocery_id: str, current_user: User = Depends(get_current_use
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid grocery id")
 
+    if by <= 0:
+        raise HTTPException(status_code=400, detail="'by' must be a positive integer")
+
     # If count > 1, decrement the count; otherwise remove the document.
     doc = col.find_one({"_id": target_oid, "user_id": user_oid})
     if not doc:
         raise HTTPException(status_code=404, detail="Grocery not found")
 
     current_count = int(doc.get("count", 1))
-    if current_count > 1:
-        res = col.update_one({"_id": target_oid, "user_id": user_oid}, {"$inc": {"count": -1}})
+    # If decrement amount is less than current, decrement; otherwise delete
+    if by < current_count:
+        res = col.update_one({"_id": target_oid, "user_id": user_oid}, {"$inc": {"count": -by}})
         if res.modified_count == 0:
             raise HTTPException(status_code=500, detail="Failed to decrement grocery count")
         return None

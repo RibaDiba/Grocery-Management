@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import IngredientCard from './IngredientCard';
 import { IngredientSkeleton } from './SkeletonLoader';
 
@@ -13,6 +14,7 @@ interface GroceryItem {
 }
 
 export default function IngredientsList({ userId }: { userId: string | null }) {
+  const router = useRouter();
   const [ingredients, setIngredients] = useState<GroceryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -168,8 +170,11 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
             boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)'
           }}
         >
-          {/* Section Header */}
-          <div className="flex items-center justify-between mb-2 bg-transparent">
+          {/* Section Header - Clickable */}
+          <button 
+            onClick={() => router.push('/ingredients')}
+            className="flex items-center justify-between mb-2 bg-transparent w-full hover:opacity-80 transition-opacity duration-200"
+          >
             <div className="flex items-center gap-2">
               {/* Warning Icon */}
               <svg 
@@ -195,7 +200,7 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-          </div>
+          </button>
           {/* Ingredient Cards */}
           <div className="space-y-2">
             {sortedIngredients.map((ingredient) => (

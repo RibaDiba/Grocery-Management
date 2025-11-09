@@ -45,16 +45,11 @@ export default function ReceiptsList({
   }
 
   return (
-    <div className="mt-8 w-full">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-2xl font-semibold text-green-800">
-          Receipts ({receipts.length})
-        </h2>
-      </div>
+    <div className="mt-6 w-full">
 
       {/* Upload Section */}
-      <div className="mb-6 p-4 rounded-lg bg-green-50 border border-green-200">
-        <label className="block mb-2 text-sm font-medium text-green-800">
+      <div className="mb-6 p-4 rounded-lg bg-white" style={{ boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)' }}>
+        <label className="block mb-2 text-sm font-medium" style={{ color: '#354A33' }}>
           Upload Receipt
         </label>
         <input
@@ -92,16 +87,17 @@ export default function ReceiptsList({
           {receipts.map((receipt, index) => (
             <div
               key={index}
-              className="rounded-lg bg-white p-4 shadow-sm border border-green-100"
+              className="rounded-lg bg-white p-4"
+              style={{ boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)' }}
             >
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm mb-2" style={{ color: '#354A33' }}>
                 File: {receipt.file_path}
               </p>
-              <p className="text-sm text-gray-600 mb-2">
+              <p className="text-sm mb-2" style={{ color: '#354A33' }}>
                 Grocery Items: {receipt.grocery_items.length}
               </p>
               {receipt.grocery_items.length > 0 && (
-                <ul className="list-disc list-inside text-sm text-gray-800">
+                <ul className="list-disc list-inside text-sm" style={{ color: '#354A33' }}>
                   {receipt.grocery_items.map((item, itemIndex) => (
                     <li key={itemIndex}>{item}</li>
                   ))}

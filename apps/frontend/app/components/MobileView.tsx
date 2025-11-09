@@ -1,86 +1,16 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import AuthIntro from './AuthIntro';
 import AuthForm from './AuthForm';
 import IngredientsList from './IngredientsList';
-import ReceiptsList from './ReceiptsList';
-
-interface Receipt {
-  user_id: string;
-  file_path: string;
-  raw_text: string;
-  grocery_items: string[];
-}
-
-interface ParsedGroceryItem {
-  description: string;
-  quantity: number;
-  price: number;
-}
-
-interface UploadResponse {
-  success: boolean;
-  items: ParsedGroceryItem[];
-  total_items: number;
-  raw_text: string;
-  processing_time_ms: number;
-}
+import RecipesList from './RecipesList';
 
 export default function MobileView() {
   const [signedIn, setSignedIn] = useState(false);
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-
-  const [receipts, setReceipts] = useState<Receipt[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const fetchReceipts = async () => {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token) {
-        setError('No access token found. Please sign in again.');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const response = await fetch('http://localhost:8000/api/receipts/', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || 'Failed to fetch receipts');
-        }
-
-        const data = await response.json();
-        
-        setReceipts(data);
-        setError(null);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
-        console.error('Error fetching receipts:', err);
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (signedIn) {
-      fetchReceipts();
-    }
-  }, [signedIn]);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -161,82 +91,6 @@ export default function MobileView() {
     setAuthView(authView === 'signin' ? 'signup' : 'signin');
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const token = localStorage.getItem('access_token');
-    if (!token) {
-      setUploadError('No access token found. Please sign in again.');
-      return;
-    }
-
-    setUploading(true);
-    setUploadError(null);
-
-    try {
-      const formData = new FormData();
-      formData.append('file', file);
-
-      const response = await fetch('http://localhost:8000/api/receipt/upload', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to upload receipt');
-      }
-
-      const data: UploadResponse = await response.json();
-      
-      // Log the API response to console
-      console.log('Receipt upload successful:', data);
-      console.log('Upload response details:', {
-        success: data.success,
-        total_items: data.total_items,
-        items: data.items,
-        raw_text: data.raw_text,
-        processing_time_ms: data.processing_time_ms,
-      });
-      
-      // Log each extracted item
-      if (data.items && data.items.length > 0) {
-        console.log('Extracted grocery items:');
-        data.items.forEach((item, index) => {
-          console.log(`  Item ${index + 1}:`, item);
-        });
-      }
-
-      // Refresh the receipts list
-      const receiptsResponse = await fetch('http://localhost:8000/api/receipts/', {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-        },
-      });
-
-      if (receiptsResponse.ok) {
-        const receiptsData = await receiptsResponse.json();
-        setReceipts(receiptsData);
-      }
-
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
-      console.error('Error uploading receipt:', err);
-      setUploadError(errorMessage);
-    } finally {
-      setUploading(false);
-    }
-  };
-
   if (!signedIn) {
     if (authView === 'intro') {
       return <AuthIntro onSignInClick={handleSignInClick} onSignUpClick={handleSignUpClick} />;
@@ -254,38 +108,134 @@ export default function MobileView() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-green-50 to-green-100 font-sans">
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center bg-white py-12 px-8 sm:items-start">
-        <header className="w-full flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <img 
-              src="/PantryPiolotLogo.png" 
-              alt="PantryPilot Logo" 
-              className="h-10 w-auto"
-            />
-            <h1 className="text-3xl font-semibold leading-10 tracking-tight text-green-800">
-              PantryPilot
-            </h1>
-          </div>
-          <button
-            onClick={handleSignOut}
-            className="rounded-full bg-red-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-red-600"
+    <div 
+      className="flex min-h-screen flex-col font-sans"
+      style={{
+        background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)'
+      }}
+    >
+      {/* Main Navigation Bar */}
+      <header className="w-full flex items-center justify-between px-4 py-4 bg-transparent">
+        <div className="flex items-center gap-3">
+          <img 
+            src="/PantryPiolotLogo.png" 
+            alt="PantryPilot Logo" 
+            className="h-10 w-auto"
+          />
+          <h1 className="text-3xl font-semibold leading-10 tracking-tight" style={{ color: '#354A33' }}>
+            PantryPilot
+          </h1>
+        </div>
+        <div className="flex items-center gap-4">
+          {/* User Icon */}
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
           >
-            Sign Out
-          </button>
-        </header>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+        </div>
+      </header>
 
-        <ReceiptsList 
-          receipts={receipts}
-          loading={loading}
-          error={error}
-          uploading={uploading}
-          uploadError={uploadError}
-          fileInputRef={fileInputRef}
-          handleFileUpload={handleFileUpload}
-        />
+      {/* Hello User Text */}
+      <div className="px-4 pb-2">
+        <p className="text-lg font-medium" style={{ color: '#354A33' }}>
+          Hello {currentUserId ? `User` : 'User'},
+        </p>
+      </div>
+
+      <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-20">
         <IngredientsList userId={currentUserId} />
+        <RecipesList />
       </main>
+
+      {/* Floating Action Buttons */}
+      <div className="fixed right-4 bottom-24 flex flex-col gap-4 z-10">
+        {/* Document/Pencil Icon Button */}
+        <button
+          className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
+          style={{
+            boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+          }}
+        >
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+        </button>
+        {/* Large Camera Button */}
+        <button
+          className="w-16 h-16 rounded-full bg-white flex items-center justify-center"
+          style={{
+            boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+          }}
+        >
+          <svg 
+            className="w-8 h-8" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
+
+      {/* Bottom Navigation Bar */}
+      <nav 
+        className="fixed bottom-0 left-0 right-0 bg-white flex items-center justify-around py-3 px-4 z-20"
+        style={{
+          boxShadow: '0px -4px 10px rgba(0, 0, 0, 0.15)'
+        }}
+      >
+        <button className="flex flex-col items-center gap-1">
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span className="text-xs" style={{ color: '#354A33' }}>Calendar</span>
+        </button>
+        <button className="flex flex-col items-center gap-1">
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+          <span className="text-xs" style={{ color: '#354A33' }}>Camera</span>
+        </button>
+        <button className="flex flex-col items-center gap-1">
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span className="text-xs" style={{ color: '#354A33' }}>Add Image</span>
+        </button>
+      </nav>
     </div>
   );
 }

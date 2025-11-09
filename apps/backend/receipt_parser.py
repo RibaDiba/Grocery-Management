@@ -28,9 +28,10 @@ class ReceiptParser:
             raise ImportError("google-generativeai is not installed.")
 
         genai.configure(api_key=config.GEMINI_API_KEY)
-        self.model: genai.GenerativeModel = genai.GenerativeModel(config.LLM_MODEL)
-        self.max_tokens: int = int(config.LLM_MAX_TOKENS)
-        self.temperature: float = float(config.LLM_TEMPERATURE)
+        # Broad typing to avoid issues when genai is mocked/unavailable at analysis time
+        self.model = genai.GenerativeModel(config.LLM_MODEL)
+        self.max_tokens = int(config.LLM_MAX_TOKENS)
+        self.temperature = float(config.LLM_TEMPERATURE)
         self.user_id = user_id
 
     def parse_receipt_text(self, ocr_text: str) -> list[dict[str, Any]]:
@@ -148,8 +149,14 @@ class ReceiptParser:
                 continue
 
             name = str(i.get("name"))
+            # Determine increment amount; default to 1 if not provided/invalid
+            try:
+                inc_by = int(i.get("count", 1))
+                if inc_by <= 0:
+                    inc_by = 1
+            except (TypeError, ValueError):
+                inc_by = 1
 
-            # Prepare the document fields to set when inserting a new grocery
             set_on_insert: dict[str, Any] = {
                 "user_id": user_oid,
                 "name": name,
@@ -169,7 +176,7 @@ class ReceiptParser:
             try:
                 updated = col.find_one_and_update(
                     {"user_id": user_oid, "name": name},
-                    {"$inc": {"count": 1}, "$setOnInsert": set_on_insert},
+                    {"$inc": {"count": inc_by}, "$setOnInsert": set_on_insert},
                     upsert=True,
                     return_document=ReturnDocument.AFTER,
                 )

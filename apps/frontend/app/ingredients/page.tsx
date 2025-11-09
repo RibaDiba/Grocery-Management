@@ -239,7 +239,7 @@ export default function IngredientsPage() {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user_id');
         setError('Session expired. Please sign in again.');
-        router.push('/');
+        router.push('/');e
         return;
       }
 
@@ -352,7 +352,7 @@ export default function IngredientsPage() {
           <ArrowLeft className="w-6 h-6" color={COLORS.primary} />
         </button>
         <h1 className="text-2xl md:text-3xl font-semibold" style={{ color: COLORS.primary }}>
-          Ingredients
+          Groceries
         </h1>
       </header>
 

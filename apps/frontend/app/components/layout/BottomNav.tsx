@@ -118,9 +118,7 @@ export default function BottomNav({ fileInputRef, uploading, onSelectFile, onFil
           onClick={() => router.push('/')}
 className={`flex flex-col items-center gap-1 rounded-full px-4 py-3 transition-colors ${homeActive ? 'bg-[#E6F2E4]' : 'hover:bg-black/5'}`}
         >
-          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" style={{ color: homeActive ? '#1F2A1C' : color }}>
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10l9-7 9 7v7a2 2 0 01-2 2h-4a2 2 0 01-2-2V12H9v5a2 2 0 01-2 2H3a2 2 0 01-2-2v-7z" />
-          </svg>
+          <img src="/home.svg" alt="Home" className="w-6 h-6" style={{ filter: homeActive ? 'invert(15%) sepia(10%) saturate(1000%) hue-rotate(80deg) brightness(90%) contrast(90%)' : 'none' }} />
           <span className="text-xs" style={{ color: homeActive ? '#1F2A1C' : color }}>Home</span>
         </button>
         <button

@@ -20,7 +20,7 @@ from pydantic import BaseModel, Field, validator
 from bson import ObjectId
 
 from auth import get_current_user, User
-from database import get_groceries_collection, get_user_collection
+from database import get_groceries_collection, get_user_collection, get_recipes_collection
 from config import config
 
 try:
@@ -103,6 +103,13 @@ def generate_recipe(current_user: User = Depends(get_current_user)):
 
     if not ingredients:
         raise HTTPException(status_code=400, detail="No groceries found for user")
+    
+    # Fetch previously generated recipes to avoid duplicates
+    recipes_col = get_recipes_collection()
+    prev_recipes = list(recipes_col.find(
+        {"user_id": str(current_user.id), "source": "ai_generated"}
+    ).sort("created_at", -1).limit(5))
+    previous_titles = [r.get("title", "") for r in prev_recipes if r.get("title")]
     if config.GEMINI_API_KEY and genai is not None:
         try:
             genai.configure(api_key=config.GEMINI_API_KEY)
@@ -117,6 +124,12 @@ def generate_recipe(current_user: User = Depends(get_current_user)):
             parts.append(
                 "TASK:\nGenerate a single practical recipe the user can make using ONLY the ingredients listed below. You may assume basic staples (salt, pepper, oil, water) but do not assume any other ingredients. Be concise and provide a short ingredients list (with amounts if appropriate) and clear step-by-step instructions.\n\n"
             )
+            if previous_titles:
+                parts.append("IMPORTANT_CONSTRAINT:\n")
+                parts.append("The user has already received the following recipes. Generate something DISTINCTLY DIFFERENT in style, cuisine, or cooking method:\n")
+                for title in previous_titles:
+                    parts.append(f"- {title}\n")
+                parts.append("\n")
             parts.append(
                 "RESPONSE_FORMAT: Return only a JSON object with the keys:\n  title: string\n  ingredients: list of objects {name: string, amount: string (optional)}\n  steps: list of strings\n  estimated_minutes: integer\nDo NOT include any extra commentary outside the JSON object.\n\n"
             )

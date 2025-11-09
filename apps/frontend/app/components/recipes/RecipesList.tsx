@@ -143,7 +143,7 @@ export default function RecipesList() {
           ingredients: preview.ingredients_used,
           steps: preview.steps,
           estimated_minutes: preview.estimated_minutes,
-          source: 'generated',
+          source: 'ai_generated',
         }),
       });
       if (!res.ok) {

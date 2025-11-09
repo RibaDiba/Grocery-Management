@@ -10,6 +10,7 @@ import CalendarOverlay, { type WeekSelection } from '../calendar/CalendarOverlay
 
 export default function PwaView() {
   const router = useRouter();
+  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
   const [signedIn, setSignedIn] = useState(false);
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
@@ -17,12 +18,8 @@ export default function PwaView() {
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedWeekRange, setSelectedWeekRange] = useState<WeekSelection | null>(null);
-
-  useEffect(() => {
-    if (!signedIn && authView !== 'intro') {
-      setTimeout(() => setAuthView('intro'), 0);
-    }
-  }, [signedIn, authView]);
+  const [uploading, setUploading] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
 
   // Initialize auth state from localStorage/JWT and populate username
   useEffect(() => {
@@ -30,7 +27,7 @@ export default function PwaView() {
     if (!token) return;
 
     // Always attempt to fetch profile to ensure username availability
-    fetch('http://localhost:8000/api/auth/me', {
+    fetch(`${API_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` }
     })
       .then(r => r.ok ? r.json() : Promise.reject())
@@ -73,7 +70,7 @@ export default function PwaView() {
     setUserToken(accessToken);
     setCurrentUserId(userId);
     // Fetch profile to get authoritative username
-    fetch('http://localhost:8000/api/auth/me', {
+    fetch(`${API_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
       .then(r => r.ok ? r.json() : Promise.reject())
@@ -92,7 +89,7 @@ export default function PwaView() {
     setSignedIn(true);
     setUserToken(accessToken);
     setCurrentUserId(userId);
-    fetch('http://localhost:8000/api/auth/me', {
+    fetch(`${API_URL}/api/auth/me`, {
       headers: { Authorization: `Bearer ${accessToken}` }
     })
       .then(r => r.ok ? r.json() : Promise.reject())
@@ -123,6 +120,43 @@ export default function PwaView() {
   const handleSignUpClick = () => setAuthView('signup');
   const handleBackToIntro = () => setAuthView('intro');
   const handleSwitchMode = () => setAuthView(authView === 'signin' ? 'signup' : 'signin');
+
+  const handleFileSelect = () => {
+    // Create a file input element
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = async (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file || !userToken) return;
+
+      setUploading(true);
+      try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch(`${API_URL}/api/receipts/upload`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${userToken}`,
+          },
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+
+        // Trigger a refresh or handle success
+        window.dispatchEvent(new CustomEvent('receiptUploaded'));
+      } catch (error) {
+        console.error('Error uploading receipt:', error);
+      } finally {
+        setUploading(false);
+      }
+    };
+    input.click();
+  };
 
   const calendarActive = showCalendar;
   const addReceiptLabel = uploading ? 'Uploading...' : 'Add Receipt';

@@ -1,31 +1,37 @@
-#!/usr/bin/env python3
-"""
-Clear all documents from collections in target MongoDB databases.
 
-This script is intentionally destructive. It lists the databases and collections
-that will be affected and requires an explicit confirmation (type DELETE) to
-proceed unless --yes/ -y is passed.
-
-Usage:
-  python scripts/clear_databases.py           # clears the configured DB
-  python scripts/clear_databases.py --all-dbs # clears all non-system DBs on the server
-  python scripts/clear_databases.py --drop    # drops the target databases instead of deleting documents
-  python scripts/clear_databases.py -y --all-dbs --drop  # run without interactive confirmation
-"""
 from __future__ import annotations
 
 import argparse
 import sys
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Dict, List
 
 from pymongo import MongoClient
-
+import warnings
 try:
-    # prefer existing project config
-    from config import config
+    import certifi
+    _TLS_KW = {"tls": True, "tlsCAFile": certifi.where()}
 except Exception:
-    config = None
+    certifi = None
+    _TLS_KW = {}
+
+config = None
+try:
+    from config import config  # type: ignore
+except Exception:
+    try:
+        # running from repo root, import as package
+        from apps.backend.config import config  # type: ignore
+    except Exception:
+        # As a last resort, add the backend directory to sys.path and retry
+        script_dir = Path(__file__).resolve().parent
+        backend_dir = script_dir.parent
+        sys.path.insert(0, str(backend_dir))
+        try:
+            from config import config  # type: ignore
+        except Exception:
+            config = None
 
 
 @dataclass
@@ -103,7 +109,16 @@ def main() -> None:
         print("Could not import project config. Please run this script from the project environment where 'config' is available.")
         sys.exit(2)
 
-    client = MongoClient(config.MONGO_URI)
+    # Create MongoClient. If the certifi bundle is available, use it to
+    # provide a trusted CA bundle for SSL/TLS validation. This avoids
+    # "certificate verify failed: unable to get local issuer certificate"
+    # errors on systems where the Python SSL store isn't configured.
+    try:
+        client = MongoClient(config.MONGO_URI, **_TLS_KW)
+    except Exception as e:
+        # Fall back to plain client but warn the user.
+        warnings.warn(f"MongoClient connection with TLS bundle failed: {e}; retrying without explicit CA file")
+        client = MongoClient(config.MONGO_URI)
 
     if args.all_dbs:
         # avoid dropping system DBs unless explicitly requested

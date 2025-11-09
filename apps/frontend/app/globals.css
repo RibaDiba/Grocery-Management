@@ -125,5 +125,6 @@ input[type="password"]::placeholder {
   }
   body {
     @apply bg-background text-foreground;
+    background-image: linear-gradient(to top, #D4E4D3, #FFFFFF);
   }
 }

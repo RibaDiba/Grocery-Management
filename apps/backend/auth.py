@@ -67,8 +67,6 @@ def register(req: RegisterRequest):
         "email": req.email,
         "password": hashed,
         "created_at": datetime.now(timezone.utc),
-        # initialize per-user groceries list
-        "groceries": [],
     }
     users.insert_one(user_doc)
     return {"message": "User registered"}

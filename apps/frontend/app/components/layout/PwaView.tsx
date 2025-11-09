@@ -1,30 +1,20 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import AuthIntro from '../auth/AuthIntro';
 import AuthForm from '../auth/AuthForm';
 import IngredientsList from '../ingredients/IngredientsList';
 import RecipesList from '../recipes/RecipesList';
-import { useReceiptUpload } from '../../hooks/useReceiptUpload';
-import { IngredientSkeleton } from '../common/SkeletonLoader';
-import SuccessPopup from '../common/SuccessPopup';
 import CalendarOverlay, { type WeekSelection } from '../calendar/CalendarOverlay';
-import BottomNav from './BottomNav';
 
 export default function PwaView() {
   const router = useRouter();
-  const pathname = usePathname();
-  const homeActive = pathname === '/';
-  const calendarActive = pathname?.startsWith('/calendar');
-  const recipesActive = pathname?.startsWith('/recipes');
-  const profileActive = pathname?.startsWith('/profile');
   const [signedIn, setSignedIn] = useState(false);
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [currentUsername, setCurrentUsername] = useState<string | null>(null);
-  const { fileInputRef, uploading, uploadSuccess, uploadError, uploadResult, handleFileSelect, handleFileChange } = useReceiptUpload();
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedWeekRange, setSelectedWeekRange] = useState<WeekSelection | null>(null);
 
@@ -132,7 +122,6 @@ export default function PwaView() {
   const handleBackToIntro = () => setAuthView('intro');
   const handleSwitchMode = () => setAuthView(authView === 'signin' ? 'signup' : 'signin');
 
-  // Active states based on route; calendar overlay state no longer controls active style
 
   if (!signedIn) {
     if (authView === 'intro') {
@@ -184,53 +173,11 @@ export default function PwaView() {
       </main>
 
 
-      {/* Error Messages */}
-      {uploadError && (
-        <div 
-          className="fixed bottom-24 left-4 right-4 bg-red-50 border border-red-300 rounded-xl p-4 z-20 shadow-lg"
-          style={{ color: '#c53030' }}
-        >
-          <div className="flex items-start gap-3">
-            <svg 
-              className="w-5 h-5 flex-shrink-0 mt-0.5" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-            >
-              <path 
-                strokeLinecap="round" 
-                strokeLinejoin="round" 
-                strokeWidth={2} 
-                d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
-              />
-            </svg>
-            <div>
-              <p className="font-medium text-sm">{uploadError}</p>
-            </div>
-          </div>
-        </div>
-      )}
-      
-      {uploadSuccess && uploadResult && (
-        <SuccessPopup 
-          message="Receipt uploaded successfully!"
-          subMessage={`${uploadResult.total_items} item${uploadResult.total_items !== 1 ? 's' : ''} extracted`}
-          onClose={() => {}}
-        />
-      )}
-
       <CalendarOverlay
         isOpen={showCalendar}
         onClose={() => setShowCalendar(false)}
         token={userToken}
         onWeekSelect={setSelectedWeekRange}
-      />
-
-      <BottomNav 
-        fileInputRef={fileInputRef}
-        uploading={uploading}
-        onSelectFile={handleFileSelect}
-        onFileChange={handleFileChange}
       />
     </div>
   );

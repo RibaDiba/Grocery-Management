@@ -21,17 +21,18 @@ export default function BottomNav({ fileInputRef, uploading, onSelectFile, onFil
   const profileActive = pathname?.startsWith('/profile');
   const color = '#354A33';
 
+
   return (
     <>
       {fabOpen && (
         <div 
-          className="fixed inset-0 z-20 transition-opacity duration-300"
+          className="fixed inset-0 z-[60] transition-opacity duration-300"
           style={{ backdropFilter: 'blur(4px)', backgroundColor: 'rgba(0, 0, 0, 0.1)' }}
           onClick={() => setFabOpen(false)}
         />
       )}
 
-      <div className="fixed left-1/2 transform -translate-x-1/2 bottom-12 z-30 flex flex-col items-center">
+      <div className="fixed left-1/2 transform -translate-x-1/2 bottom-12 z-[70] flex flex-col items-center">
         <div className={`flex flex-col items-center transition-all duration-300 ease-in-out ${fabOpen ? 'opacity-100 translate-y-0 mb-4' : 'opacity-0 translate-y-4 pointer-events-none mb-0'}`}>
           <button
             onClick={() => setFabOpen(false)}
@@ -105,7 +106,7 @@ export default function BottomNav({ fileInputRef, uploading, onSelectFile, onFil
       </div>
 
       <nav 
-        className="fixed bottom-4 left-4 right-4 bg-white flex items-center justify-between py-3 px-8 rounded-full z-20 overflow-hidden"
+        className="fixed bottom-4 left-4 right-4 bg-white flex items-center justify-between py-3 px-8 rounded-full z-[60] overflow-hidden"
         style={{ boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)' }}
       >
         <button 
@@ -128,7 +129,7 @@ className={`flex flex-col items-center gap-1 rounded-full px-4 py-3 transition-c
           </svg>
           <span className="text-xs" style={{ color: calendarActive ? '#1F2A1C' : color }}>Calendar</span>
         </button>
-        <div aria-hidden className="w-16 pointer-events-none" />
+        <div aria-hidden className="w-24 pointer-events-none" />
         <button 
 className={`flex flex-col items-center gap-1 rounded-full px-4 py-3 transition-colors ${recipesActive ? 'bg-[#E6F2E4]' : 'hover:bg-black/5'}`}
           onClick={() => router.push('/recipes')}

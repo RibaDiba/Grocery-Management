@@ -35,8 +35,19 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
           },
         });
 
+        if (response.status === 401) {
+          // Token is invalid or expired
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_id');
+          setError('Session expired. Please sign in again.');
+          setLoading(false);
+          // Reload the page to reset state
+          window.location.reload();
+          return;
+        }
+
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.detail || 'Failed to fetch ingredients');
         }
 
@@ -84,7 +95,7 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
   const sortedIngredients = useMemo(() => {
     const now = new Date();
     
-    return [...uniqueIngredients].sort((a, b) => {
+    const sorted = [...uniqueIngredients].sort((a, b) => {
       const getExpirationDate = (item: GroceryItem): Date | null => {
         if (item.max_days !== null) {
           const createdDate = new Date(item.created_at);
@@ -111,6 +122,9 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
       // Sort by expiration date (closest first)
       return expirationA.getTime() - expirationB.getTime();
     });
+    
+    // Return only top 3 ingredients
+    return sorted.slice(0, 3);
   }, [uniqueIngredients]);
 
   if (loading) {
@@ -130,23 +144,57 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
   }
 
   return (
-    <div className="mt-8 w-full">
-      <h2 className="text-2xl font-semibold mb-4 text-green-800">
-        Ingredients ({sortedIngredients.length})
-      </h2>
+    <div className="mt-6 w-full">
       {sortedIngredients.length === 0 ? (
         <p className="text-gray-600">No ingredients found. Upload receipts to add ingredients.</p>
       ) : (
-        <div className="space-y-3">
-          {sortedIngredients.map((ingredient) => (
-            <IngredientCard
-              key={ingredient.id}
-              name={ingredient.name}
-              created_at={ingredient.created_at}
-              min_days={ingredient.min_days}
-              max_days={ingredient.max_days}
-            />
-          ))}
+        <div 
+          className="rounded-lg p-3"
+          style={{
+            backgroundColor: '#E8F5E9',
+            boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)'
+          }}
+        >
+          {/* Section Header */}
+          <div className="flex items-center justify-between mb-2 bg-transparent">
+            <div className="flex items-center gap-2">
+              {/* Warning Icon */}
+              <svg 
+                className="w-4 h-4" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                style={{ color: '#354A33' }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+              <h2 className="text-lg font-semibold" style={{ color: '#354A33' }}>
+                Ingredients about to go bad
+              </h2>
+            </div>
+            {/* Arrow Icon */}
+            <svg 
+              className="w-4 h-4" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              style={{ color: '#354A33' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
+          {/* Ingredient Cards */}
+          <div className="space-y-2">
+            {sortedIngredients.map((ingredient) => (
+              <IngredientCard
+                key={ingredient.id}
+                name={ingredient.name}
+                created_at={ingredient.created_at}
+                min_days={ingredient.min_days}
+                max_days={ingredient.max_days}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

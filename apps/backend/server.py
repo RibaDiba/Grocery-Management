@@ -9,7 +9,7 @@ from ocr import ocr_image, check_tesseract_available
 from receipt_parser import ReceiptParser
 from auth import router as auth_router, get_current_user, User
 from groceries import router as groceries_router
-from . import recipes as recipes_module
+from recipes import recipes as recipes_module
 recipes_router = recipes_module.router
 from receipts import router as receipts_router
 

@@ -13,6 +13,11 @@ type CalendarOverlayProps = {
   onClose: () => void;
   token: string | null;
   onWeekSelect?: (week: WeekSelection) => void;
+  onAddReceipt?: () => void;
+  addReceiptLabel?: string;
+  addReceiptDisabled?: boolean;
+  onViewProfile?: () => void;
+  profileLabel?: string;
 };
 
 type CalendarCell = number | null;
@@ -72,7 +77,17 @@ const toExpiryDate = (item: GroceryItem): Date => {
   return created;
 };
 
-export default function CalendarOverlay({ isOpen, onClose, token, onWeekSelect }: CalendarOverlayProps) {
+export default function CalendarOverlay({
+  isOpen,
+  onClose,
+  token,
+  onWeekSelect,
+  onAddReceipt,
+  addReceiptLabel = 'Add Receipt',
+  addReceiptDisabled = false,
+  onViewProfile,
+  profileLabel = 'Profile',
+}: CalendarOverlayProps) {
   const [visibleMonth, setVisibleMonth] = useState(() => new Date());
   const [selectedDate, setSelectedDate] = useState(() => new Date());
   const [itemsLoading, setItemsLoading] = useState(false);
@@ -325,7 +340,7 @@ export default function CalendarOverlay({ isOpen, onClose, token, onWeekSelect }
         </button>
       </div>
 
-      <div className="flex-1 overflow-y-auto px-4 pb-8">
+      <div className="flex-1 overflow-y-auto px-4 pb-28">
         <div className="mx-auto mt-4 w-full max-w-sm rounded-3xl bg-white p-4 shadow-xl">
           <div className="mb-4 flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -472,6 +487,7 @@ export default function CalendarOverlay({ isOpen, onClose, token, onWeekSelect }
           ))}
         </div>
       </div>
+
     </div>
   );
 }

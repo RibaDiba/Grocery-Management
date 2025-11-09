@@ -11,22 +11,22 @@ import SuccessPopup from './SuccessPopup';
 import CalendarOverlay from './CalendarOverlay';
 
 export default function PwaView() {
-  const [signedIn, setSignedIn] = useState(false);
-  const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
-  const [userToken, setUserToken] = useState<string | null>(null);
-  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [fabOpen, setFabOpen] = useState(false);
-  const { fileInputRef, uploading, uploadSuccess, uploadError, uploadResult, handleFileSelect, handleFileChange, resetUpload } = useReceiptUpload();
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
-  const [showCalendar, setShowCalendar] = useState(false);
-
-  useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      // Try to get userId from localStorage, or decode from token
+    const [signedIn, setSignedIn] = useState(() => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      return !!token;
+    });
+    const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>(() => {
+      const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+      return token ? 'intro' : 'intro'; // If token exists, still show intro if not fully signed in, otherwise intro
+    });
+    const [userToken, setUserToken] = useState(() => {
+      return typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    });
+    const [currentUserId, setCurrentUserId] = useState(() => {
+      if (typeof window === 'undefined') return null;
       let userId = localStorage.getItem('user_id');
-      if (!userId) {
-        // Decode JWT to get user_id if not stored
+      const token = localStorage.getItem('access_token');
+      if (!userId && token) {
         try {
           const base64Url = token.split('.')[1];
           const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -45,20 +45,25 @@ export default function PwaView() {
           console.error('Error decoding JWT:', error);
         }
       }
-      
-      if (userId) {
-        setSignedIn(true);
-        setUserToken(token);
-        setCurrentUserId(userId);
-        // Don't set authView when signed in - user goes directly to app
-      } else {
-        setAuthView('intro'); // Show intro if no valid user
+      return userId;
+    });
+    const [fabOpen, setFabOpen] = useState(false);
+    const { fileInputRef, uploading, uploadSuccess, uploadError, uploadResult, handleFileSelect, handleFileChange, resetUpload } = useReceiptUpload();
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    const [showCalendar, setShowCalendar] = useState(false);
+  
+    useEffect(() => {
+      // This useEffect is now only for handling changes to signedIn state if it changes after initial render
+      // The initial authView is set by the useState initializer
+      if (signedIn && authView === 'intro') {
+        // If user signs in, and authView is still intro, it means they just signed in
+        // No need to explicitly set authView here, as the component will re-render with signedIn=true
+        // and the conditional rendering will take over.
+      } else if (!signedIn && authView !== 'intro') {
+        // If user signs out, reset authView to intro
+        setAuthView('intro');
       }
-    } else {
-      setAuthView('intro'); // Show intro if no token
-    }
-  }, []);
-
+    }, [signedIn, authView]);
   const handleSignIn = (accessToken: string, userId: string) => {
     setSignedIn(true);
     setUserToken(accessToken);

@@ -229,4 +229,3 @@ def delete_grocery(grocery_id: str, current_user: User = Depends(get_current_use
     if result.deleted_count == 0:
         raise HTTPException(status_code=500, detail="Failed to delete grocery")
     return None
-

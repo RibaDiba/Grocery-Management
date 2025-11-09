@@ -120,7 +120,7 @@ export default function IngredientsPage() {
           key,
           name: it.name,
           ids: [it.id],
-          count: 1,
+          count: it.count,
           expiresInDays: days,
           category: it.category ?? null,
         });
@@ -174,9 +174,47 @@ export default function IngredientsPage() {
   };
 
 
-  const deleteSelected = () => {
-    setIngredients((prev) => prev.filter((it) => !selectedIds.includes(it.id)));
-    setSelectedIds([]);
+  const deleteSelected = async () => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      setError('No access token found. Please sign in again.');
+      router.push('/');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      for (const id of selectedIds) {
+        const response = await fetch(`http://localhost:8000/api/groceries/${id}`, {
+          method: 'DELETE',
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (response.status === 401) {
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('user_id');
+          setError('Session expired. Please sign in again.');
+          router.push('/');
+          return;
+        }
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(errorData.detail || `Failed to delete ingredient with ID: ${id}`);
+        }
+      }
+      // After all deletions, re-fetch the ingredients to update the list
+      await fetchIngredients();
+      setSelectedIds([]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
+      console.error('Error deleting ingredients:', err);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const rowTint = (days: number | null) => {

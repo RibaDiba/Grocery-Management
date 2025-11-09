@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from 'next/link';
 
 type Recipe = {
   id: string;
@@ -26,6 +27,37 @@ export default function RecipesList() {
     estimated_minutes: number;
   } | null>(null);
   const [regenerating, setRegenerating] = useState(false);
+
+  const handleDelete = async (recipeId: string) => {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('access_token') : null;
+    if (!token) {
+      setError("You must be logged in to delete recipes.");
+      return;
+    }
+
+    if (!confirm("Are you sure you want to delete this recipe?")) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`http://localhost:8000/api/recipes/${recipeId}`, {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.detail || `Failed to delete recipe (${res.status})`);
+      }
+
+      setRecipes((prev) => prev.filter((r) => r.id !== recipeId));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Failed to delete recipe';
+      setError(msg);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -157,95 +189,75 @@ export default function RecipesList() {
   };
 
   return (
-    <div className="mt-4 w-full">
-      <div 
-        className="rounded-lg p-2.5"
-        style={{
-          backgroundColor: '#E8F5E9',
-          boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)'
-        }}
-      >
-        {/* Section Header */}
-        <div className="flex items-center justify-between mb-2 bg-transparent">
-          <div className="flex items-center gap-2">
-            {/* Book Icon */}
-            <svg 
-              className="w-4 h-4" 
-              fill="none" 
-              stroke="currentColor" 
-              viewBox="0 0 24 24"
-              style={{ color: '#354A33' }}
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
-            <h2 className="text-lg font-semibold" style={{ color: '#354A33' }}>
-              Recipes, just for you
-            </h2>
-          </div>
-          <div className="flex items-center gap-2">
-            {genError && (
-              <span className="text-xs text-red-600">{genError}</span>
-            )}
-            <button
-              onClick={handleGenerate}
-              disabled={generating}
-              className="text-xs font-medium rounded-md px-3 py-1.5 bg-white hover:bg-black/5 disabled:opacity-50"
-              style={{ color: '#354A33', border: '1px solid #e5e7eb' }}
-            >
-              {generating ? 'Generating…' : 'Generate recipe'}
-            </button>
-          </div>
+    <div className="w-full px-4 py-8">
+      <div className="flex items-center justify-between mb-6">
+        <h1 className="text-2xl font-bold text-gray-800">Recipes</h1>
+        <div className="flex items-center gap-2">
+          {genError && (
+            <span className="text-xs text-red-600">{genError}</span>
+          )}
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="text-sm font-medium rounded-md px-4 py-2 bg-white text-green-800 border border-green-800 hover:bg-green-50 disabled:opacity-50"
+          >
+            {generating ? 'Generating…' : 'Generate recipe'}
+          </button>
         </div>
+      </div>
 
-        {/* Status */}
-        {loading && (
-          <div className="text-sm text-gray-600 px-1 py-1">Loading recipes…</div>
-        )}
-        {error && (
-          <div className="text-sm text-red-600 px-1 py-1">{error}</div>
-        )}
+      {/* Status */}
+      {loading && (
+        <div className="text-sm text-gray-600 py-4">Loading recipes…</div>
+      )}
+      {error && (
+        <div className="text-sm text-red-600 py-4">{error}</div>
+      )}
 
-        {/* Recipe Cards */}
-        <div className="space-y-1.5">
-          {recipes.map((recipe) => (
+      {/* Recipe Cards */}
+      <div className="space-y-3">
+        {recipes.map((recipe) => (
+          <Link href={`/recipes/${recipe.id}`} key={recipe.id} className="block">
             <div
-              key={recipe.id}
-              className="rounded-lg bg-white p-2 flex items-center gap-2"
+              className="rounded-lg bg-white border border-gray-200 p-4 flex items-center justify-between gap-4 hover:bg-gray-50 transition-colors"
             >
-              {/* Image Placeholder */}
-              <div 
-                className="w-14 h-14 rounded-lg flex-shrink-0 flex items-center justify-center"
-                style={{ backgroundColor: '#E5E7EB' }}
-              >
-                <svg 
-                  className="w-7 h-7" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                  style={{ color: '#9CA3AF' }}
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate" style={{ color: '#354A33' }}>
+                <p className="text-base font-semibold text-gray-900 truncate">
                   {recipe.title}
                 </p>
                 {recipe.estimated_minutes ? (
-                  <p className="text-xs text-gray-500">{recipe.estimated_minutes} min{recipe.estimated_minutes !== 1 ? 's' : ''}</p>
+                  <p className="text-sm text-gray-500">{recipe.estimated_minutes} min{recipe.estimated_minutes !== 1 ? 's' : ''}</p>
                 ) : null}
               </div>
-              <button className="text-xs font-medium" style={{ color: '#354A33' }}>
-                See more
+              <button 
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDelete(recipe.id);
+                }}
+                className="text-gray-400 hover:text-red-600 p-2 rounded-full transition-colors"
+                aria-label="Delete recipe"
+              >
+                <svg 
+                  xmlns="http://www.w3.org/2000/svg" 
+                  fill="none" 
+                  viewBox="0 0 24 24" 
+                  strokeWidth={1.5} 
+                  stroke="currentColor" 
+                  className="w-5 h-5"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+                </svg>
               </button>
             </div>
-          ))}
-          {!loading && !error && recipes.length === 0 && (
-            <div className="rounded-lg bg-white p-3 text-sm text-gray-600">
-              No recipes yet. Generate one or add manually!
-            </div>
-          )}
-        </div>
+          </Link>
+        ))}
+        {!loading && !error && recipes.length === 0 && (
+          <div className="rounded-lg bg-white border border-gray-200 p-6 text-center text-gray-600">
+            <p className="font-medium">No recipes yet.</p>
+            <p className="text-sm">Click &apos;Generate recipe&apos; to get started!</p>
+          </div>
+        )}
       </div>
 
       {previewOpen && preview && (

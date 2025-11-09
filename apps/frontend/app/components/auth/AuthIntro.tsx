@@ -12,7 +12,7 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
     <div 
       className="flex min-h-screen flex-col items-center justify-center p-4"
       style={{
-        background: 'linear-gradient(to bottom, #E8F5E9 0%, #CBDFC9 50%, #95C590 100%)'
+        background: 'linear-gradient(to bottom, #CBDFC9 0%, #95C590 100%)'
       }}
     >
       <div className="w-full max-w-md text-center">
@@ -24,7 +24,7 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
         {/* Heading */}
         <h1 
           className="mb-4 text-5xl font-bold sm:text-6xl"
-          style={{ color: '#2D5016' }}
+          style={{ color: '#354A33' }}
         >
           SaveRe
         </h1>
@@ -32,9 +32,9 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
         {/* Shortened Message */}
         <p 
           className="mb-12 text-lg leading-relaxed sm:text-xl"
-          style={{ color: '#4A614F' }}
+          style={{ color: '#354A33' }}
         >
-          Track groceries. Personalized.  
+          SaveRe it. Don't waste it.
         </p>
         
         {/* Buttons with Different Colors */}
@@ -43,10 +43,10 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
             onClick={onSignInClick}
             className="w-full rounded-full px-8 py-4 text-lg font-semibold transition-all hover:scale-105 hover:shadow-lg active:scale-95"
             style={{
-              backgroundColor: '#2D5016',
+              backgroundColor: '#354A33',
               color: '#FFFFFF',
               borderRadius: '9999px',
-              boxShadow: '0px 4px 12px rgba(45, 80, 22, 0.3)'
+              boxShadow: '0px 4px 12px rgba(53, 74, 51, 0.3)'
             }}
           >
             Sign In
@@ -56,9 +56,9 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
             className="w-full rounded-full px-8 py-4 text-lg font-semibold transition-all hover:scale-105 hover:shadow-lg active:scale-95"
             style={{
               backgroundColor: '#FFFFFF',
-              color: '#2D5016',
+              color: '#354A33',
               borderRadius: '9999px',
-              border: '2px solid #2D5016',
+              border: '2px solid #354A33',
               boxShadow: '0px 4px 12px rgba(255, 255, 255, 0.3)'
             }}
           >

@@ -23,7 +23,7 @@ export default function AuthForm({
     <div 
       className="relative flex min-h-screen flex-col items-center justify-center p-4"
       style={{
-        background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)'
+        background: 'linear-gradient(to bottom, #CBDFC9 0%, #95C590 100%)'
       }}
     >
       <button
@@ -55,7 +55,7 @@ export default function AuthForm({
         <button
           onClick={onSwitchMode}
           className="mt-4 w-full text-center underline transition-colors hover:opacity-80"
-          style={{ color: '#4A614F' }}
+          style={{ color: '#354A33' }}
         >
           {mode === 'signin' 
             ? "Don't have an account? Sign Up" 

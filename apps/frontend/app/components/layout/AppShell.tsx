@@ -61,8 +61,10 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   } = useReceiptUpload();
 
   return (
-    <div className="min-h-screen">
-      {children}
+    <div className="min-h-screen flex flex-col">
+      <main className="flex-1 overflow-y-auto pb-24">
+        {children}
+      </main>
 
       {showManualInput && (
         <div

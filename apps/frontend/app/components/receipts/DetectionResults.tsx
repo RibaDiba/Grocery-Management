@@ -24,3 +24,4 @@ export default function DetectionResults({ result }: DetectionResultsProps) {
   );
 }
 
+

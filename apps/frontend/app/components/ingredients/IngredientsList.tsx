@@ -3,8 +3,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import IngredientCard from './IngredientCard';
-import { IngredientSkeleton } from './SkeletonLoader';
-import { type WeekSelection } from './CalendarOverlay';
+import { IngredientSkeleton } from '../common/SkeletonLoader';
+import { type WeekSelection } from '../calendar/CalendarOverlay';
 
 interface GroceryItem {
   id: string;

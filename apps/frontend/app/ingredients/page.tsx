@@ -3,11 +3,11 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, Filter, AlertCircle, CheckCircle, MoreVertical, Trash2, Minus, Plus } from 'lucide-react';
-import { IngredientSkeleton } from '../components/SkeletonLoader';
+import { IngredientSkeleton } from '../components/common/SkeletonLoader';
 import { Checkbox } from '../../components/ui/checkbox';
-import CalendarOverlay from '../components/CalendarOverlay';
-import BottomNav from '../components/BottomNav';
-import SuccessPopup from '../components/SuccessPopup';
+import CalendarOverlay from '../components/calendar/CalendarOverlay';
+import BottomNav from '../components/layout/BottomNav';
+import SuccessPopup from '../components/common/SuccessPopup';
 import { useReceiptUpload } from '../hooks/useReceiptUpload';
 
 interface GroceryItem {
@@ -736,7 +736,7 @@ export default function IngredientsPage() {
       />
 
       <BottomNav 
-        onCalendarClick={() => setShowCalendar(true)}
+        onCalendarClick={() => router.push('/calendar')}
         onProfileClick={() => {}}
         color={COLORS.primary}
       />

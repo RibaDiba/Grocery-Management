@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import AuthIntro from './AuthIntro';
 import AuthForm from './AuthForm';
 import IngredientsList from './IngredientsList';
@@ -11,6 +12,7 @@ import SuccessPopup from './SuccessPopup';
 import CalendarOverlay from './CalendarOverlay';
 
 export default function MobileView() {
+  const router = useRouter();
   const [signedIn, setSignedIn] = useState(false);
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
@@ -345,7 +347,10 @@ export default function MobileView() {
           </svg>
           <span className="text-xs" style={{ color: '#354A33' }}>Calendar</span>
         </button>
-        <button className="flex flex-col items-center gap-1">
+        <button 
+          className="flex flex-col items-center gap-1"
+          onClick={() => router.push('/profile')}
+        >
           <svg 
             className="w-6 h-6" 
             fill="none" 

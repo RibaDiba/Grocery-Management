@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
-// Helper function to decode JWT token and extract user_id
-const decodeJWT = (token: string): string | null => {
+// Helper function to decode JWT token and extract fields
+const decodeJWT = (token: string): { userId: string | null; username: string | null } => {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -12,14 +12,15 @@ const decodeJWT = (token: string): string | null => {
         .join('')
     );
     const payload = JSON.parse(jsonPayload);
-    return payload.sub || null; // 'sub' contains the user_id
+    return { userId: payload.sub || null, username: payload.username || null };
   } catch (error) {
     console.error('Error decoding JWT:', error);
-    return null;
+    return { userId: null, username: null };
   }
 };
 
 const SignUp = ({ onSignUp }: { onSignUp: (accessToken: string, userId: string) => void }) => {
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -32,7 +33,7 @@ const SignUp = ({ onSignUp }: { onSignUp: (accessToken: string, userId: string) 
       setError('Passwords do not match');
       return;
     }
-    if (!email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       setError('Please fill in all fields.');
       return;
     }
@@ -44,7 +45,7 @@ const SignUp = ({ onSignUp }: { onSignUp: (accessToken: string, userId: string) 
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+  body: JSON.stringify({ username, email, password }),
       });
 
       if (response.ok) {
@@ -63,22 +64,21 @@ const SignUp = ({ onSignUp }: { onSignUp: (accessToken: string, userId: string) 
             const token = loginData.access_token;
             
             // Decode JWT to get user_id
-            const userId = decodeJWT(token);
+            const { userId, username: claimedUsername } = decodeJWT(token);
             
             // Store token, user_id, and email in localStorage for persistence
             localStorage.setItem('access_token', token);
-            if (userId) {
-              localStorage.setItem('user_id', userId);
-            }
+            if (userId) localStorage.setItem('user_id', userId);
+            if (claimedUsername) localStorage.setItem('username', claimedUsername);
             // Store email for profile display
             localStorage.setItem('user_email', email);
             
-            onSignUp(token, userId || ''); // Pass token and user_id to parent
+            onSignUp(token, userId || ''); // Consumer currently expects userId
           } else {
             // Registration successful but auto-login failed, just proceed
             onSignUp('', '');
           }
-        } catch (err) {
+        } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
           // Auto-login failed, but registration was successful
           onSignUp('', '');
         }
@@ -100,6 +100,23 @@ const SignUp = ({ onSignUp }: { onSignUp: (accessToken: string, userId: string) 
           Sign up
         </h1>
         {error && <p className="mb-4 text-red-600">{error}</p>}
+        <div className="mb-4">
+          <label className="block mb-2 text-left text-sm font-medium" style={{ color: '#354A33' }}>
+            Username
+          </label>
+          <input
+            type="text"
+            placeholder="Username"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            className="w-full rounded-full border border-solid bg-white px-5 py-3 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-0"
+            style={{
+              color: '#354A33',
+              borderColor: '#CBDFC9',
+              borderRadius: '9999px'
+            }}
+          />
+        </div>
         <div className="mb-4">
           <label className="block mb-2 text-left text-sm font-medium" style={{ color: '#354A33' }}>
             Email

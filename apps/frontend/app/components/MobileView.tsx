@@ -17,9 +17,9 @@ export default function MobileView() {
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUsername, setCurrentUsername] = useState<string | null>(null);
   const [fabOpen, setFabOpen] = useState(false);
-  const { fileInputRef, uploading, uploadSuccess, uploadError, uploadResult, handleFileSelect, handleFileChange, resetUpload } = useReceiptUpload();
-  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const { fileInputRef, uploading, uploadSuccess, uploadError, uploadResult, handleFileSelect, handleFileChange } = useReceiptUpload();
   const [showCalendar, setShowCalendar] = useState(false);
   const [selectedWeekRange, setSelectedWeekRange] = useState<WeekSelection | null>(null);
 
@@ -28,6 +28,7 @@ export default function MobileView() {
     if (token) {
       // Try to get userId from localStorage, or decode from token
       let userId = localStorage.getItem('user_id');
+      let username = localStorage.getItem('username');
       if (!userId) {
         // Decode JWT to get user_id if not stored
         try {
@@ -41,24 +42,27 @@ export default function MobileView() {
           );
           const payload = JSON.parse(jsonPayload);
           userId = payload.sub || null;
-          if (userId) {
-            localStorage.setItem('user_id', userId);
-          }
+          username = payload.username || username;
+          if (userId) localStorage.setItem('user_id', userId);
+          if (username) localStorage.setItem('username', username);
         } catch (error) {
           console.error('Error decoding JWT:', error);
         }
       }
       
       if (userId) {
-        setSignedIn(true);
-        setUserToken(token);
-        setCurrentUserId(userId);
-        // Don't set authView when signed in - user goes directly to app
+        // Defer grouped state updates
+        setTimeout(() => {
+          setSignedIn(true);
+          setUserToken(token);
+          setCurrentUserId(userId);
+          setCurrentUsername(username || null);
+        }, 0);
       } else {
-        setAuthView('intro'); // Show intro if no valid user
+        setTimeout(() => setAuthView('intro'), 0);
       }
     } else {
-      setAuthView('intro'); // Show intro if no token
+      setTimeout(() => setAuthView('intro'), 0);
     }
   }, []);
 
@@ -66,18 +70,25 @@ export default function MobileView() {
     setSignedIn(true);
     setUserToken(accessToken);
     setCurrentUserId(userId);
+    const storedUsername = localStorage.getItem('username');
+    if (storedUsername) setCurrentUsername(storedUsername);
   };
 
   const handleSignUp = (accessToken: string, userId: string) => {
     setSignedIn(true);
     setUserToken(accessToken);
     setCurrentUserId(userId);
+    const storedUsername = localStorage.getItem('username');
+    if (storedUsername) setCurrentUsername(storedUsername);
   };
 
+  // Potential future use: expose sign out action in UI
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const handleSignOut = () => {
     // Clear localStorage
     localStorage.removeItem('access_token');
-    localStorage.removeItem('user_id');
+  localStorage.removeItem('user_id');
+  localStorage.removeItem('username');
     
     // Reset state
     setSignedIn(false);
@@ -128,9 +139,11 @@ export default function MobileView() {
       {/* Main Navigation Bar */}
       <header className="w-full flex items-center justify-between px-4 py-4 bg-transparent">
         <div className="flex items-center gap-3">
-          <img 
-            src="/PantryPiolotLogo.png" 
-            alt="PantryPilot Logo" 
+          {/* Using native img; consider next/image for optimization */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/PantryPiolotLogo.png"
+            alt="PantryPilot Logo"
             className="h-10 w-auto"
           />
           <h1 className="text-3xl font-semibold leading-10 tracking-tight" style={{ color: '#354A33' }}>
@@ -142,7 +155,7 @@ export default function MobileView() {
       {/* Hello User Text */}
       <div className="px-4 pb-2">
         <p className="text-lg font-medium" style={{ color: '#354A33' }}>
-          Hello {currentUserId ? `User` : 'User'},
+          Hello {currentUsername || 'User'},
         </p>
       </div>
 
@@ -323,7 +336,7 @@ export default function MobileView() {
         <SuccessPopup 
           message="Receipt uploaded successfully!"
           subMessage={`${uploadResult.total_items} item${uploadResult.total_items !== 1 ? 's' : ''} extracted`}
-          onClose={() => setShowSuccessPopup(false)}
+          onClose={() => {/* popup auto-dismiss handled externally; noop */}}
         />
       )}
 

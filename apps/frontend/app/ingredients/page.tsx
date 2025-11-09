@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { ArrowLeft, Search, Filter, AlertCircle, CheckCircle, MoreVertical, Trash2, Minus, Plus } from 'lucide-react';
 import { IngredientSkeleton } from '../components/SkeletonLoader';
 import { Checkbox } from '../../components/ui/checkbox';
+import CalendarOverlay from '../components/CalendarOverlay';
+import BottomNav from '../components/BottomNav';
+import SuccessPopup from '../components/SuccessPopup';
+import { useReceiptUpload } from '../hooks/useReceiptUpload';
 
 interface GroceryItem {
   id: string;
@@ -42,6 +46,9 @@ export default function IngredientsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [deleteAmounts, setDeleteAmounts] = useState<Record<string, number>>({});
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [fabOpen, setFabOpen] = useState(false);
+  const { fileInputRef, uploading, uploadSuccess, uploadError, uploadResult, handleFileSelect, handleFileChange } = useReceiptUpload();
 
   const fetchIngredients = async () => {
     const token = localStorage.getItem('access_token');
@@ -94,6 +101,16 @@ export default function IngredientsPage() {
 
   useEffect(() => {
     fetchIngredients();
+  }, []);
+
+  useEffect(() => {
+    const handleReceiptUploaded = () => {
+      fetchIngredients();
+    };
+    window.addEventListener('receiptUploaded', handleReceiptUploaded);
+    return () => {
+      window.removeEventListener('receiptUploaded', handleReceiptUploaded);
+    };
   }, []);
 
   const getExpiresInDays = (item: GroceryItem): number | null => {
@@ -521,11 +538,152 @@ export default function IngredientsPage() {
         )}
       </div>
 
+      {/* Backdrop Blur Overlay */}
+      {fabOpen && (
+        <div 
+          className="fixed inset-0 z-25 transition-opacity duration-300"
+          style={{
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)'
+          }}
+          onClick={() => setFabOpen(false)}
+        />
+      )}
+
+      {/* Floating Action Buttons */}
+      <div className="fixed left-1/2 transform -translate-x-1/2 bottom-12 z-30 flex flex-col items-center">
+        {/* Document/Pencil Icon Button - Animated */}
+        <div
+          className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
+            fabOpen ? 'opacity-100 translate-y-0 mb-4' : 'opacity-0 translate-y-4 pointer-events-none mb-0'
+          }`}
+        >
+          <button
+            onClick={() => setFabOpen(false)}
+            className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
+            style={{
+              boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <svg 
+              className="w-6 h-6" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              style={{ color: COLORS.primary }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <span className="text-xs mt-1 font-medium" style={{ color: COLORS.primary }}>
+            Input manually
+          </span>
+        </div>
+        {/* Upload Receipt Button - Animated */}
+        <div
+          className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
+            fabOpen ? 'opacity-100 translate-y-0 mb-4' : 'opacity-0 translate-y-4 pointer-events-none mb-0'
+          }`}
+        >
+          <button
+            onClick={() => {
+              handleFileSelect();
+              setFabOpen(false);
+            }}
+            disabled={uploading}
+            className="w-12 h-12 rounded-full bg-white flex items-center justify-center disabled:opacity-50"
+            style={{
+              boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            {uploading ? (
+              <svg 
+                className="w-6 h-6 animate-spin" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                style={{ color: COLORS.primary }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            ) : (
+              <svg 
+                className="w-6 h-6" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                style={{ color: COLORS.primary }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 1 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            )}
+          </button>
+          <span className="text-xs mt-1 font-medium" style={{ color: COLORS.primary }}>
+            {uploading ? 'Uploading...' : 'Upload receipt'}
+          </span>
+        </div>
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,application/pdf"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
+        {/* Camera Button - Animated */}
+        <div
+          className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
+            fabOpen ? 'opacity-100 translate-y-0 mb-4' : 'opacity-0 translate-y-4 pointer-events-none mb-0'
+          }`}
+        >
+          <button
+            onClick={() => setFabOpen(false)}
+            className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
+            style={{
+              boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <svg 
+              className="w-6 h-6" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              style={{ color: COLORS.primary }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+          <span className="text-xs mt-1 font-medium" style={{ color: COLORS.primary }}>
+            Receipt picture
+          </span>
+        </div>
+        {/* Main Plus Button */}
+        <button
+          onClick={() => setFabOpen(!fabOpen)}
+          className="w-16 h-16 rounded-full bg-white flex items-center justify-center transition-transform duration-300"
+          style={{
+            boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)',
+            transform: fabOpen ? 'rotate(45deg)' : 'rotate(0deg)'
+          }}
+        >
+          <svg 
+            className="w-8 h-8" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: COLORS.primary }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+        </button>
+      </div>
+
       {/* Floating Delete Button */}
       {selectedIds.length > 0 && (
         <button
           onClick={handleDeleteSelected}
-          className="fixed bottom-4 md:bottom-8 left-1/2 -translate-x-1/2 z-50 rounded-full px-5 md:px-6 py-2.5 md:py-3 font-medium text-sm md:text-base transition-transform hover:scale-105 active:scale-95 text-white flex items-center gap-2"
+          className="fixed bottom-36 left-1/2 -translate-x-1/2 z-50 rounded-full px-5 md:px-6 py-2.5 md:py-3 font-medium text-sm md:text-base transition-transform hover:scale-105 active:scale-95 text-white flex items-center gap-2"
           style={{
             backgroundColor: COLORS.alert,
             boxShadow: '0px 6px 12px rgba(0, 0, 0, 0.15)',
@@ -535,6 +693,53 @@ export default function IngredientsPage() {
           <span>Remove selected</span>
         </button>
       )}
+
+      {/* Error Messages */}
+      {uploadError && (
+        <div 
+          className="fixed bottom-36 left-4 right-4 bg-red-50 border border-red-300 rounded-xl p-4 z-20 shadow-lg"
+          style={{ color: '#c53030' }}
+        >
+          <div className="flex items-start gap-3">
+            <svg 
+              className="w-5 h-5 flex-shrink-0 mt-0.5" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+            >
+              <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth={2} 
+                d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" 
+              />
+            </svg>
+            <div>
+              <p className="font-medium text-sm">{uploadError}</p>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {uploadSuccess && uploadResult && (
+        <SuccessPopup 
+          message="Receipt uploaded successfully!"
+          subMessage={`${uploadResult.total_items} item${uploadResult.total_items !== 1 ? 's' : ''} extracted`}
+          onClose={() => {}}
+        />
+      )}
+
+      <CalendarOverlay
+        isOpen={showCalendar} 
+        onClose={() => setShowCalendar(false)} 
+        token={typeof window !== 'undefined' ? localStorage.getItem('access_token') : null} 
+      />
+
+      <BottomNav 
+        onCalendarClick={() => setShowCalendar(true)}
+        onProfileClick={() => {}}
+        color={COLORS.primary}
+      />
     </div>
   );
 }

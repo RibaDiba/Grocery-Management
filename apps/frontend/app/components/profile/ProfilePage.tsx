@@ -10,8 +10,9 @@ interface ProfilePageProps {
   onSignOut?: () => void;
 }
 
-// Helper function to decode JWT token
-const decodeJWT = (token: string): any => {
+// Helper function to decode JWT token (returns a minimal payload shape or null)
+interface JWTPayload { sub?: string; email?: string; username?: string; [key: string]: unknown }
+const decodeJWT = (token: string): JWTPayload | null => {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -35,7 +36,7 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
   const [userName, setUserName] = useState<string>('User Name');
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
+  // Removed unused loading state
   const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
@@ -169,9 +170,7 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
 
   const handleSignOut = () => {
     if (window.confirm('Are you sure you want to sign out?')) {
-      // Get user ID before clearing to preserve profile image
-      const currentUserId = userId || localStorage.getItem('user_id');
-      
+      // Clear auth/session data; user-specific profile data persist via keyed storage
       // Clear authentication and session data, but keep user-specific data
       localStorage.removeItem('access_token');
       localStorage.removeItem('user_id');
@@ -235,7 +234,7 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
       } else {
         throw new Error('Failed to update name');
       }
-    } catch (error) {
+    } catch {
       // Fallback: update locally if API fails
       setUserName(newName);
       const currentUserId = userId || localStorage.getItem('user_id');
@@ -249,8 +248,8 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
 
   return (
     <div 
-      className="min-h-screen flex flex-col pb-20"
-      style={{ backgroundColor: '#E8F5E9' }}
+      className="flex min-h-screen flex-col font-sans pb-20"
+      style={{ background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)' }}
     >
       {/* Header Section */}
       <div className="pt-16 pb-5 px-5">
@@ -282,11 +281,8 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
               style={{ backgroundColor: '#fff' }}
             >
               {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <svg 
                   className="w-12 h-12" 

@@ -312,22 +312,6 @@ export default function CalendarOverlay({
       }}
     >
       <div className="px-4 pt-6 flex items-center gap-3">
-        <button
-          aria-label="Go back"
-          onClick={onClose}
-          className="flex h-10 w-10 items-center justify-center rounded-full bg-white/80 shadow-md"
-          style={{ color: '#354A33' }}
-        >
-          <svg
-            className="h-5 w-5"
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-          </svg>
-        </button>
-
         <div className="flex-1">
           <div className="flex items-center gap-3 rounded-full bg-white/90 px-4 py-2 shadow-lg">
             <button

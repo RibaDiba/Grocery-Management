@@ -68,6 +68,7 @@ export default function MobileView() {
     setCurrentUserId(userId);
     const storedUsername = localStorage.getItem('username');
     if (storedUsername) setCurrentUsername(storedUsername);
+    window.dispatchEvent(new CustomEvent('authStateChange', { detail: { isSignedIn: true } }));
   };
 
   const handleSignUp = (accessToken: string, userId: string) => {
@@ -76,6 +77,7 @@ export default function MobileView() {
     setCurrentUserId(userId);
     const storedUsername = localStorage.getItem('username');
     if (storedUsername) setCurrentUsername(storedUsername);
+    window.dispatchEvent(new CustomEvent('authStateChange', { detail: { isSignedIn: true } }));
   };
 
   // Potential future use: expose sign out action in UI
@@ -157,7 +159,7 @@ export default function MobileView() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-28">
         <IngredientsList userId={currentUserId} selectedWeekRange={selectedWeekRange} />
-        <ExpiringSoonList userId={currentUserId} onFileChange={handleFileChange} />
+        <ExpiringSoonList userId={currentUserId} />
         <RecipesList />
       </main>
 

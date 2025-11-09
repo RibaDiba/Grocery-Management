@@ -86,6 +86,7 @@ export default function PwaView() {
         const storedUsername = typeof window !== 'undefined' ? localStorage.getItem('username') : null;
         if (storedUsername) setCurrentUsername(storedUsername);
       });
+    window.dispatchEvent(new CustomEvent('authStateChange', { detail: { isSignedIn: true } }));
   };
 
   const handleSignUp = (accessToken: string, userId: string) => {
@@ -104,6 +105,7 @@ export default function PwaView() {
         const storedUsername = typeof window !== 'undefined' ? localStorage.getItem('username') : null;
         if (storedUsername) setCurrentUsername(storedUsername);
       });
+    window.dispatchEvent(new CustomEvent('authStateChange', { detail: { isSignedIn: true } }));
   };
 
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -185,11 +187,7 @@ export default function PwaView() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-28">
         <IngredientsList userId={currentUserId} selectedWeekRange={selectedWeekRange} />
-        <ExpiringSoonList
-          userId={currentUserId}
-          onUploadClick={uploading ? undefined : handleFileSelect}
-          onFileChange={handleFileChange}
-        />
+        <ExpiringSoonList userId={currentUserId} />
         <RecipesList />
       </main>
 

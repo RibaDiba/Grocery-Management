@@ -150,28 +150,33 @@ class AnalyzeTextRequest(BaseModel):
 async def analyze_text(body: AnalyzeTextRequest, current_user: User = Depends(get_current_user)) -> JSONResponse:
     """
     Accepts multi-line text input with one grocery per line, optionally including a count.
-    Examples of accepted line formats:
-      - "Apples x 3"
-      - "3 Apples"
-      - "Milk - 2"
-      - "Bread: 1"
-      - "Yogurt, 4"
-      - "Banana 5"
-
-    If no count is present, defaults to 1. Empty or invalid lines are ignored.
+    The text is parsed for item names, which are then passed to an LLM to enrich
+    with expiration data before being saved.
     """
     start_time = time.time()
     text = (body.text or "").strip()
     if not text:
         raise HTTPException(status_code=400, detail="Text is required")
 
-    # Parse user-provided lines into items with name + count
-    lines = [l.strip() for l in text.splitlines() if l.strip()]
-    items: list[dict[str, Any]] = []
+    # Use ReceiptParser to get expiration dates from the LLM
+    try:
+        receipt_parser = ReceiptParser(user_id=current_user.id)
+        # The parser expects a single block of text.
+        parsed_items_from_llm = receipt_parser.parse_receipt_text(text)
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to parse items with LLM: {str(e)}"
+        )
 
-    # Helper to clean bullet prefixes like '-', '*', '•', or '1. '
+    # Create a lookup for expiration data
+    llm_data_map = {item['name'].lower(): item for item in parsed_items_from_llm}
+
+    # Now, parse the original text again to get the counts for each item
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    final_items: list[dict[str, Any]] = []
+
     bullet_re = re.compile(r"^(?:[-*•]\s+|\d+\.|\d+\)\s+)")
-    # Patterns: leading count or trailing count with separators
     lead_count_re = re.compile(r"^(?P<count>\d+)\s*(?:x|×)?\s*(?P<name>.+)$", re.IGNORECASE)
     trail_count_re = re.compile(r"^(?P<name>.+?)\s*(?:x|×|:|,|-)?\s*(?P<count>\d+)\s*$", re.IGNORECASE)
 
@@ -181,15 +186,15 @@ async def analyze_text(body: AnalyzeTextRequest, current_user: User = Depends(ge
             continue
 
         name = None
-        count = None
+        count = 1
 
         m = lead_count_re.match(line)
         if m:
+            name = m.group("name").strip()
             try:
                 count = int(m.group("count"))
             except ValueError:
-                count = 1
-            name = m.group("name").strip()
+                pass
         else:
             m2 = trail_count_re.match(line)
             if m2:
@@ -197,32 +202,37 @@ async def analyze_text(body: AnalyzeTextRequest, current_user: User = Depends(ge
                 try:
                     count = int(m2.group("count"))
                 except ValueError:
-                    count = 1
+                    pass
             else:
-                # No explicit count; entire line is the name
                 name = line
-                count = 1
 
         if not name:
             continue
-        if count is None or count <= 0:
-            count = 1
-
-        # Normalize whitespace and trim quotes
+        
         norm_name = name.strip().strip('"\'')
         if not norm_name:
             continue
-        items.append({"name": norm_name, "count": count})
 
-    # Persist groceries using existing upsert logic (now supports per-item count)
+        # Combine with LLM data
+        item_data = {"name": norm_name, "count": count if count > 0 else 1}
+        llm_match = llm_data_map.get(norm_name.lower())
+        if llm_match:
+            if 'min_days' in llm_match and 'max_days' in llm_match:
+                item_data['min_days'] = llm_match['min_days']
+                item_data['max_days'] = llm_match['max_days']
+        
+        final_items.append(item_data)
+
+    # Persist groceries
     grocery_item_ids: list[str] = []
-    try:
-        receipt_parser = ReceiptParser(user_id=current_user.id)
-        grocery_item_ids = receipt_parser.add_groceries_to_db(items)
-    except Exception as e:
-        print(f"Warning: failed to persist groceries (text analysis): {e}")
+    if final_items:
+        try:
+            # The existing receipt_parser instance is fine to reuse
+            grocery_item_ids = receipt_parser.add_groceries_to_db(final_items)
+        except Exception as e:
+            print(f"Warning: failed to persist groceries (text analysis): {e}")
 
-    # Persist a receipt document noting it's from text input
+    # Persist a receipt document
     try:
         from database import get_receipts_collection
         from models import Receipt
@@ -239,11 +249,11 @@ async def analyze_text(body: AnalyzeTextRequest, current_user: User = Depends(ge
         print(f"Warning: failed to persist receipt doc (text analysis): {e}")
 
     processing_time_ms = int((time.time() - start_time) * 1000)
-    total_units = sum(i.get("count", 1) for i in items)
+    total_units = sum(i.get("count", 1) for i in final_items)
     return JSONResponse(
         content={
             "success": True,
-            "items": items,
+            "items": final_items,
             "total_items": total_units,
             "raw_text": text,
             "processing_time_ms": processing_time_ms,

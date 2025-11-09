@@ -8,6 +8,7 @@ import RecipesList from './RecipesList';
 import { useReceiptUpload } from '../hooks/useReceiptUpload';
 import { IngredientSkeleton } from './SkeletonLoader';
 import SuccessPopup from './SuccessPopup';
+import CalendarOverlay, { type WeekSelection } from './CalendarOverlay';
 
 export default function MobileView() {
   const [signedIn, setSignedIn] = useState(false);
@@ -17,6 +18,8 @@ export default function MobileView() {
   const [fabOpen, setFabOpen] = useState(false);
   const { fileInputRef, uploading, uploadSuccess, uploadError, uploadResult, handleFileSelect, handleFileChange, resetUpload } = useReceiptUpload();
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const [selectedWeekRange, setSelectedWeekRange] = useState<WeekSelection | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -142,7 +145,7 @@ export default function MobileView() {
       </div>
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-20">
-        <IngredientsList userId={currentUserId} />
+        <IngredientsList userId={currentUserId} selectedWeekRange={selectedWeekRange} />
         <RecipesList />
       </main>
 
@@ -322,6 +325,13 @@ export default function MobileView() {
         />
       )}
 
+      <CalendarOverlay
+        isOpen={showCalendar}
+        onClose={() => setShowCalendar(false)}
+        token={userToken}
+        onWeekSelect={setSelectedWeekRange}
+      />
+
       {/* Bottom Navigation Bar */}
       <nav 
         className="fixed bottom-4 left-4 right-4 bg-white flex items-center justify-between py-3 px-8 rounded-full z-20"
@@ -329,7 +339,7 @@ export default function MobileView() {
           boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)'
         }}
       >
-        <button className="flex flex-col items-center gap-1">
+        <button type="button" onClick={() => setShowCalendar(true)} className="flex flex-col items-center gap-1">
           <svg 
             className="w-6 h-6" 
             fill="none" 

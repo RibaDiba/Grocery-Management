@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt
 from passlib.context import CryptContext
-from pydantic import BaseModel, EmailStr, field_validator
+from pydantic import BaseModel, EmailStr, Field, field_validator
 
 from config import config
 from database import get_user_collection
@@ -34,6 +34,7 @@ def get_password_hash(password: str) -> str:
 
 
 class RegisterRequest(BaseModel):
+    username: str = Field(..., min_length=3, max_length=20)
     email: EmailStr
     password: str
 
@@ -58,12 +59,15 @@ class TokenResponse(BaseModel):
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(req: RegisterRequest):
     users = get_user_collection()
-    existing = users.find_one({"email": req.email})
-    if existing:
+    # Enforce unique email and username
+    if users.find_one({"email": req.email}):
         raise HTTPException(status_code=400, detail="Email already registered")
+    if users.find_one({"username": req.username}):
+        raise HTTPException(status_code=400, detail="Username already registered")
 
     hashed = get_password_hash(req.password)
     user_doc = {
+        "username": req.username,
         "email": req.email,
         "password": hashed,
         "created_at": datetime.now(timezone.utc),
@@ -79,13 +83,18 @@ def login(req: LoginRequest):
     if not user or not verify_password(req.password, user.get("password", "")):
         raise HTTPException(status_code=401, detail="Invalid email or password")
 
-    token = create_access_token({"sub": str(user.get("_id")), "email": user["email"]})
+    token = create_access_token({
+        "sub": str(user.get("_id")),
+        "email": user["email"],
+        "username": user.get("username", "")
+    })
     return TokenResponse(access_token=token)
 
 
 class User(BaseModel):
     id: str
     email: EmailStr
+    username: str
 
 
 def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
@@ -103,5 +112,10 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> User:
     if not user:
         raise HTTPException(status_code=401, detail="User not found")
 
-    return User(id=str(user.get("_id")), email=email)
+    return User(id=str(user.get("_id")), email=email, username=user.get("username", ""))
+    
+@router.get("/me", response_model=User)
+def me(current_user: User = Depends(get_current_user)) -> User:
+    """Return the authenticated user's profile."""
+    return current_user
 

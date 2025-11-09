@@ -9,7 +9,6 @@ from ocr import ocr_image, check_tesseract_available
 from receipt_parser import ReceiptParser
 from auth import router as auth_router, get_current_user, User
 from groceries import router as groceries_router
-from recipes import router as recipes_router
 from receipts import router as receipts_router
 
 
@@ -17,7 +16,14 @@ app = FastAPI(title="grocery-backend")
 app.include_router(auth_router)
 app.include_router(groceries_router)
 app.include_router(receipts_router)
-app.include_router(recipes_router)
+# Dynamically import recipes router to avoid static import path issues
+try:
+    import importlib
+    _recipes_mod = importlib.import_module("recipes")
+    app.include_router(getattr(_recipes_mod, "router"))
+except Exception:
+    # If recipes module is unavailable, continue without it
+    pass
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], 

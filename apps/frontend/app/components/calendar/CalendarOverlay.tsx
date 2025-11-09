@@ -272,13 +272,25 @@ export default function CalendarOverlay({
     return selectedWeekItems.filter((item) => item.name.toLowerCase().includes(normalized));
   }, [selectedWeekItems, searchTerm]);
 
-  const weekExpiryDaySet = useMemo(() => {
+  const visibleMonthExpiryDaySet = useMemo(() => {
     const set = new Set<string>();
-    selectedWeekItems.forEach((item) => {
-      set.add(toDateKey(item.expiryDate));
+    const monthYearKey = {
+      year: visibleMonth.getFullYear(),
+      month: visibleMonth.getMonth(),
+    };
+
+    items.forEach((item) => {
+      const expiryDate = toExpiryDate(item);
+      if (
+        expiryDate.getFullYear() === monthYearKey.year &&
+        expiryDate.getMonth() === monthYearKey.month
+      ) {
+        set.add(toDateKey(expiryDate));
+      }
     });
+
     return set;
-  }, [selectedWeekItems]);
+  }, [items, visibleMonth]);
 
   const noWeekItems = !itemsLoading && !itemsError && selectedWeekItems.length === 0;
   const noSearchResults =
@@ -459,7 +471,7 @@ export default function CalendarOverlay({
 
                     const dayDate =
                       cell !== null ? new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), cell) : null;
-                    const showExpiryDot = dayDate ? weekExpiryDaySet.has(toDateKey(dayDate)) : false;
+                    const showExpiryDot = dayDate ? visibleMonthExpiryDaySet.has(toDateKey(dayDate)) : false;
 
                     return (
                       <div key={`${cell ?? 'blank'}-${cellIndex}`} className="relative flex justify-center py-1">
@@ -477,7 +489,7 @@ export default function CalendarOverlay({
                         </button>
                         {showExpiryDot && (
                           <span
-                            className="absolute -bottom-0.5 h-1.5 w-1.5 rounded-full"
+                            className="absolute bottom-1 h-1.5 w-1.5 rounded-full"
                             style={{ backgroundColor: '#C53030' }}
                           />
                         )}

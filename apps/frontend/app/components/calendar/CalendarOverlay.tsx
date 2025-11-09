@@ -93,6 +93,7 @@ export default function CalendarOverlay({
   const [itemsLoading, setItemsLoading] = useState(false);
   const [itemsError, setItemsError] = useState<string | null>(null);
   const [items, setItems] = useState<GroceryItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     if (isOpen) {
@@ -255,6 +256,23 @@ export default function CalendarOverlay({
       .sort((a, b) => a.expiryDate.getTime() - b.expiryDate.getTime());
   }, [items, weekInfo]);
 
+  const filteredWeekItems = useMemo(() => {
+    const normalized = searchTerm.trim().toLowerCase();
+    if (!normalized) {
+      return selectedWeekItems;
+    }
+
+    return selectedWeekItems.filter((item) => item.name.toLowerCase().includes(normalized));
+  }, [selectedWeekItems, searchTerm]);
+
+  const noWeekItems = !itemsLoading && !itemsError && selectedWeekItems.length === 0;
+  const noSearchResults =
+    !itemsLoading &&
+    !itemsError &&
+    selectedWeekItems.length > 0 &&
+    filteredWeekItems.length === 0 &&
+    searchTerm.trim().length > 0;
+
   if (!isOpen) {
     return null;
   }
@@ -304,22 +322,38 @@ export default function CalendarOverlay({
               placeholder="Search food items"
               className="flex-1 border-none bg-transparent text-sm focus:outline-none"
               style={{ color: '#354A33' }}
-              readOnly
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
             />
-            <svg
-              className="h-5 w-5"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
+            <button
+              type="button"
+              aria-label="Search"
+              className="flex h-8 w-8 items-center justify-center rounded-full transition-colors hover:bg-white/60"
               style={{ color: '#354A33' }}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M21 21l-4.35-4.35m0 0A7 7 0 1010 17a7 7 0 006.65-10.35z"
-              />
-            </svg>
+              <svg
+                className="h-5 w-5"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  cx={11}
+                  cy={11}
+                  r={6}
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="m20 20-3.5-3.5"
+                  stroke="currentColor"
+                  strokeWidth={2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
           </div>
         </div>
 
@@ -461,13 +495,19 @@ export default function CalendarOverlay({
             </div>
           )}
 
-          {!itemsLoading && !itemsError && selectedWeekItems.length === 0 && (
+          {noWeekItems && (
             <div className="rounded-2xl bg-white/90 p-4 text-center text-sm font-medium text-[#4A614F] shadow-md">
               No groceries expiring this week.
             </div>
           )}
 
-          {selectedWeekItems.map((item) => (
+          {noSearchResults && (
+            <div className="rounded-2xl bg-white/90 p-4 text-center text-sm font-medium text-[#4A614F] shadow-md">
+              No groceries match “{searchTerm.trim()}”.
+            </div>
+          )}
+
+          {filteredWeekItems.map((item) => (
             <div
               key={item.id}
               className="flex items-center justify-between rounded-2xl bg-white px-4 py-3 shadow-md"

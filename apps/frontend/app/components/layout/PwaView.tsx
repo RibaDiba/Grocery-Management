@@ -123,6 +123,21 @@ export default function PwaView() {
   const handleBackToIntro = () => setAuthView('intro');
   const handleSwitchMode = () => setAuthView(authView === 'signin' ? 'signup' : 'signin');
 
+  const calendarActive = showCalendar;
+  const addReceiptLabel = uploading ? 'Uploading...' : 'Add Receipt';
+
+  const handleAddReceiptFromOverlay = () => {
+    if (uploading) return;
+    handleFileSelect();
+    setShowCalendar(false);
+    setFabOpen(false);
+  };
+
+  const handleViewProfile = () => {
+    router.push('/profile');
+    setShowCalendar(false);
+    setFabOpen(false);
+  };
 
   if (!signedIn) {
     if (authView === 'intro') {
@@ -170,17 +185,94 @@ export default function PwaView() {
 
       <main className="flex-1 w-full max-w-3xl mx-auto px-4 pb-28">
         <IngredientsList userId={currentUserId} selectedWeekRange={selectedWeekRange} />
-        <ExpiringSoonList userId={currentUserId} onUploadClick={handleFileSelect} onFileChange={handleFileChange} />
+        <ExpiringSoonList
+          userId={currentUserId}
+          onUploadClick={uploading ? undefined : handleFileSelect}
+          onFileChange={handleFileChange}
+        />
         <RecipesList />
       </main>
-
 
       <CalendarOverlay
         isOpen={showCalendar}
         onClose={() => setShowCalendar(false)}
         token={userToken}
         onWeekSelect={setSelectedWeekRange}
+        onAddReceipt={handleAddReceiptFromOverlay}
+        addReceiptLabel={addReceiptLabel}
+        addReceiptDisabled={uploading}
+        onViewProfile={handleViewProfile}
       />
+
+      <nav 
+        className="fixed bottom-4 left-4 right-4 bg-white flex items-center justify-between py-3 px-8 rounded-full z-20"
+        style={{
+          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)'
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => setShowCalendar(true)}
+          aria-pressed={calendarActive}
+          className={`flex flex-col items-center gap-1 rounded-full px-4 py-2 transition-colors ${
+            calendarActive ? 'bg-[#E6F2E4]' : 'hover:bg-black/5'
+          }`}
+        >
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: calendarActive ? '#1F2A1C' : '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span className="text-xs font-medium" style={{ color: calendarActive ? '#1F2A1C' : '#354A33' }}>
+            Calendar
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            if (uploading) return;
+            handleFileSelect();
+            setFabOpen(false);
+          }}
+          disabled={uploading}
+          className="flex flex-col items-center gap-1 rounded-full px-4 py-2 transition-colors hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <span className="text-xs font-medium" style={{ color: '#354A33' }}>
+            {addReceiptLabel}
+          </span>
+        </button>
+        <button
+          type="button"
+          onClick={() => router.push('/profile')}
+          className="flex flex-col items-center gap-1 rounded-full px-4 py-2 transition-colors hover:bg-black/5"
+        >
+          <svg 
+            className="w-6 h-6" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            style={{ color: '#354A33' }}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+          </svg>
+          <span className="text-xs font-medium" style={{ color: '#354A33' }}>
+            Profile
+          </span>
+        </button>
+      </nav>
     </div>
   );
 }

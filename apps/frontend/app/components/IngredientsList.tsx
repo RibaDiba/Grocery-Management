@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import IngredientCard from './IngredientCard';
 
 interface GroceryItem {
@@ -16,71 +16,87 @@ export default function IngredientsList({ userId }: { userId: string | null }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchIngredients = async () => {
-      const token = localStorage.getItem('access_token');
-      
-      if (!token || !userId) {
-        setError('No access token or user ID found. Please sign in again.');
+  // Use useCallback to stabilize the function
+  const fetchIngredients = useCallback(async () => {
+    const token = localStorage.getItem('access_token');
+    
+    if (!token || !userId) {
+      setError('No access token or user ID found. Please sign in again.');
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/api/groceries/', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.status === 401) {
+        // Token is invalid or expired
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('user_id');
+        setError('Session expired. Please sign in again.');
         setLoading(false);
+        // Reload the page to reset state
+        window.location.reload();
         return;
       }
 
-      try {
-        const response = await fetch('http://localhost:8000/api/groceries/', {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.status === 401) {
-          // Token is invalid or expired
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('user_id');
-          setError('Session expired. Please sign in again.');
-          setLoading(false);
-          // Reload the page to reset state
-          window.location.reload();
-          return;
-        }
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.detail || 'Failed to fetch ingredients');
-        }
-
-        const data = await response.json();
-        
-        // Log the result to console
-        console.log('Ingredients fetched successfully:', data);
-        console.log('Number of ingredients:', data.length);
-        
-        // Log each ingredient individually
-        data.forEach((ingredient: GroceryItem, index: number) => {
-          console.log(`Ingredient ${index + 1}:`, {
-            id: ingredient.id,
-            name: ingredient.name,
-            min_days: ingredient.min_days,
-            max_days: ingredient.max_days,
-            created_at: ingredient.created_at,
-          });
-        });
-
-        setIngredients(data);
-        setError(null);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
-        console.error('Error fetching ingredients:', err);
-        setError(errorMessage);
-      } finally {
-        setLoading(false);
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.detail || 'Failed to fetch ingredients');
       }
+
+      const data = await response.json();
+      
+      // Log the result to console
+      console.log('Ingredients fetched successfully:', data);
+      console.log('Number of ingredients:', data.length);
+      
+      // Log each ingredient individually
+      data.forEach((ingredient: GroceryItem, index: number) => {
+        console.log(`Ingredient ${index + 1}:`, {
+          id: ingredient.id,
+          name: ingredient.name,
+          min_days: ingredient.min_days,
+          max_days: ingredient.max_days,
+          created_at: ingredient.created_at,
+        });
+      });
+
+      setIngredients(data);
+      setError(null);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Network error or server is unreachable.';
+      console.error('Error fetching ingredients:', err);
+      setError(errorMessage);
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  // Initial fetch when component mounts
+  useEffect(() => {
+    fetchIngredients();
+  }, [fetchIngredients]);
+
+  // Listen for receipt upload events to refresh list
+  useEffect(() => {
+    const handleReceiptUploaded = () => {
+      // Refresh ingredients list after receipt upload
+      fetchIngredients();
     };
 
-    fetchIngredients();
-  }, [userId]);
+    window.addEventListener('receiptUploaded', handleReceiptUploaded);
+
+    return () => {
+      window.removeEventListener('receiptUploaded', handleReceiptUploaded);
+    };
+  }, [userId, fetchIngredients]);
 
   // Get unique ingredient names (in case there are duplicates)
   // Must be called before conditional returns to follow Rules of Hooks

@@ -5,12 +5,15 @@ import AuthIntro from './AuthIntro';
 import AuthForm from './AuthForm';
 import IngredientsList from './IngredientsList';
 import RecipesList from './RecipesList';
+import { useReceiptUpload } from '../hooks/useReceiptUpload';
 
 export default function PwaView() {
   const [signedIn, setSignedIn] = useState(false);
   const [authView, setAuthView] = useState<'intro' | 'signin' | 'signup'>('intro');
   const [userToken, setUserToken] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [fabOpen, setFabOpen] = useState(false);
+  const { fileInputRef, uploading, uploadSuccess, uploadError, uploadResult, handleFileSelect, handleFileChange, resetUpload } = useReceiptUpload();
 
   useEffect(() => {
     const token = localStorage.getItem('access_token');
@@ -126,18 +129,6 @@ export default function PwaView() {
             PantryPilot
           </h1>
         </div>
-        <div className="flex items-center gap-4">
-          {/* User Icon */}
-          <svg 
-            className="w-6 h-6" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-            style={{ color: '#354A33' }}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-          </svg>
-        </div>
       </header>
 
       {/* Hello User Text */}
@@ -152,30 +143,133 @@ export default function PwaView() {
         <RecipesList />
       </main>
 
-      {/* Floating Action Buttons */}
-      <div className="fixed right-4 bottom-24 flex flex-col gap-4 z-10">
-        {/* Document/Pencil Icon Button */}
-        <button
-          className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
+      {/* Backdrop Blur Overlay */}
+      {fabOpen && (
+        <div 
+          className="fixed inset-0 z-25 transition-opacity duration-300"
           style={{
-            boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+            backdropFilter: 'blur(4px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)'
           }}
+          onClick={() => setFabOpen(false)}
+        />
+      )}
+
+      {/* Floating Action Buttons */}
+      <div className="fixed left-1/2 transform -translate-x-1/2 bottom-12 z-30 flex flex-col items-center">
+        {/* Document/Pencil Icon Button - Animated */}
+        <div
+          className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
+            fabOpen ? 'opacity-100 translate-y-0 mb-4' : 'opacity-0 translate-y-4 pointer-events-none mb-0'
+          }`}
         >
-          <svg 
-            className="w-6 h-6" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-            style={{ color: '#354A33' }}
+          <button
+            onClick={() => setFabOpen(false)}
+            className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
+            style={{
+              boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+            }}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-          </svg>
-        </button>
-        {/* Large Camera Button */}
+            <svg 
+              className="w-6 h-6" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              style={{ color: '#354A33' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+            </svg>
+          </button>
+          <span className="text-xs mt-1 font-medium" style={{ color: '#354A33' }}>
+            Input manually
+          </span>
+        </div>
+        {/* Upload Receipt Button - Animated */}
+        <div
+          className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
+            fabOpen ? 'opacity-100 translate-y-0 mb-4' : 'opacity-0 translate-y-4 pointer-events-none mb-0'
+          }`}
+        >
+          <button
+            onClick={() => {
+              handleFileSelect();
+              setFabOpen(false);
+            }}
+            disabled={uploading}
+            className="w-12 h-12 rounded-full bg-white flex items-center justify-center disabled:opacity-50"
+            style={{
+              boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            {uploading ? (
+              <svg 
+                className="w-6 h-6 animate-spin" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                style={{ color: '#354A33' }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+            ) : (
+              <svg 
+                className="w-6 h-6" 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+                style={{ color: '#354A33' }}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+              </svg>
+            )}
+          </button>
+          <span className="text-xs mt-1 font-medium" style={{ color: '#354A33' }}>
+            {uploading ? 'Uploading...' : 'Upload receipt'}
+          </span>
+        </div>
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,application/pdf"
+          onChange={handleFileChange}
+          style={{ display: 'none' }}
+        />
+        {/* Camera Button - Animated */}
+        <div
+          className={`flex flex-col items-center transition-all duration-300 ease-in-out ${
+            fabOpen ? 'opacity-100 translate-y-0 mb-4' : 'opacity-0 translate-y-4 pointer-events-none mb-0'
+          }`}
+        >
+          <button
+            onClick={() => setFabOpen(false)}
+            className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
+            style={{
+              boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+            }}
+          >
+            <svg 
+              className="w-6 h-6" 
+              fill="none" 
+              stroke="currentColor" 
+              viewBox="0 0 24 24"
+              style={{ color: '#354A33' }}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </button>
+          <span className="text-xs mt-1 font-medium" style={{ color: '#354A33' }}>
+            Receipt picture
+          </span>
+        </div>
+        {/* Main Plus Button */}
         <button
-          className="w-16 h-16 rounded-full bg-white flex items-center justify-center"
+          onClick={() => setFabOpen(!fabOpen)}
+          className="w-16 h-16 rounded-full bg-white flex items-center justify-center transition-transform duration-300"
           style={{
-            boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)'
+            boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)',
+            transform: fabOpen ? 'rotate(45deg)' : 'rotate(0deg)'
           }}
         >
           <svg 
@@ -185,17 +279,36 @@ export default function PwaView() {
             viewBox="0 0 24 24"
             style={{ color: '#354A33' }}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         </button>
       </div>
 
+      {/* Upload Status Messages */}
+      {uploadError && (
+        <div 
+          className="fixed bottom-24 left-4 right-4 bg-red-50 border border-red-300 rounded-lg p-4 z-20"
+          style={{ color: '#c53030' }}
+        >
+          <p className="text-sm font-medium">{uploadError}</p>
+        </div>
+      )}
+      
+      {uploadSuccess && uploadResult && (
+        <div 
+          className="fixed bottom-24 left-4 right-4 bg-green-50 border border-green-300 rounded-lg p-4 z-20"
+          style={{ color: '#22543d' }}
+        >
+          <p className="text-sm font-medium">✓ Receipt uploaded successfully!</p>
+          <p className="text-xs mt-1">{uploadResult.total_items} items extracted</p>
+        </div>
+      )}
+
       {/* Bottom Navigation Bar */}
       <nav 
-        className="fixed bottom-0 left-0 right-0 bg-white flex items-center justify-around py-3 px-4 z-20"
+        className="fixed bottom-4 left-4 right-4 bg-white flex items-center justify-between py-3 px-8 rounded-full z-20"
         style={{
-          boxShadow: '0px -4px 10px rgba(0, 0, 0, 0.15)'
+          boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)'
         }}
       >
         <button className="flex flex-col items-center gap-1">
@@ -218,22 +331,9 @@ export default function PwaView() {
             viewBox="0 0 24 24"
             style={{ color: '#354A33' }}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
           </svg>
-          <span className="text-xs" style={{ color: '#354A33' }}>Camera</span>
-        </button>
-        <button className="flex flex-col items-center gap-1">
-          <svg 
-            className="w-6 h-6" 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-            style={{ color: '#354A33' }}
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-          </svg>
-          <span className="text-xs" style={{ color: '#354A33' }}>Add Image</span>
+          <span className="text-xs" style={{ color: '#354A33' }}>Profile</span>
         </button>
       </nav>
     </div>

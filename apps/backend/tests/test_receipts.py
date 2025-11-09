@@ -3,7 +3,7 @@ import pytest
 from fastapi.testclient import TestClient
 from mongomock import MongoClient
 from server import app
-from database import get_db, get_receipts_collection
+from database import get_db
 from auth_routes import router as auth_router
 from receipts import router as receipts_router
 from models import User
@@ -21,6 +21,9 @@ def client():
         return mock_db
 
     app.dependency_overrides[get_db] = get_mock_db
+    # Ensure all code paths use the mock receipts collection
+    import database as _db_mod
+    _db_mod.get_receipts_collection = lambda: mock_db["receipts"]
     app.include_router(auth_router)
     app.include_router(receipts_router)
     
@@ -64,14 +67,16 @@ def test_list_receipts_with_data(client):
     headers = get_auth_headers(client)
     
     # Need to get the user id from the token
-    import jwt
+    from jose import jwt
     from config import config
     token = headers["Authorization"].split(" ")[1]
     payload = jwt.decode(token, config.SECRET_KEY, algorithms=[config.ALGORITHM])
     user_id = payload["sub"]
 
 
-    receipts_col = get_receipts_collection()
+    # Use the mocked receipts collection
+    import database as _db_mod
+    receipts_col = _db_mod.get_receipts_collection()
     receipts_col.insert_one({
         "user_id": user_id,
         "file_path": "/path/to/receipt1.jpg",

@@ -27,3 +27,6 @@ def get_receipts_collection():
 
 def get_groceries_collection():
     return db.get_collection("groceries")
+
+def get_recipes_collection():
+    return db.get_collection("recipes")

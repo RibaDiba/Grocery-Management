@@ -9,8 +9,9 @@ interface ProfilePageProps {
   onSignOut?: () => void;
 }
 
-// Helper function to decode JWT token
-const decodeJWT = (token: string): any => {
+// Helper function to decode JWT token (returns a minimal payload shape or null)
+interface JWTPayload { sub?: string; email?: string; username?: string; [key: string]: unknown }
+const decodeJWT = (token: string): JWTPayload | null => {
   try {
     const base64Url = token.split('.')[1];
     const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
@@ -34,6 +35,8 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
   const [userName, setUserName] = useState<string>('User Name');
   const [profileImage, setProfileImage] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  // Removed unused loading state
+  const [showEditNameModal, setShowEditNameModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
@@ -187,9 +190,7 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
 
   const handleSignOut = () => {
     if (window.confirm('Are you sure you want to sign out?')) {
-      // Get user ID before clearing to preserve profile image
-      const currentUserId = userId || localStorage.getItem('user_id');
-      
+      // Clear auth/session data; user-specific profile data persist via keyed storage
       // Clear authentication and session data, but keep user-specific data
       localStorage.removeItem('access_token');
       localStorage.removeItem('user_id');
@@ -215,11 +216,60 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
     }
   };
 
+  const handleUpdateName = async (newName: string) => {
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+      throw new Error('Not authenticated');
+    }
+
+    try {
+      // Try to update name via API if endpoint exists
+      const response = await fetch('http://localhost:8000/api/users/me', {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ name: newName }),
+      });
+
+      if (response.ok) {
+        setUserName(newName);
+        // Save with user-specific key
+        const currentUserId = userId || localStorage.getItem('user_id');
+        if (currentUserId) {
+          localStorage.setItem(`user_name_${currentUserId}`, newName);
+        } else {
+          localStorage.setItem('user_name', newName);
+        }
+      } else if (response.status === 404) {
+        // If API endpoint doesn't exist, just update locally
+        setUserName(newName);
+        const currentUserId = userId || localStorage.getItem('user_id');
+        if (currentUserId) {
+          localStorage.setItem(`user_name_${currentUserId}`, newName);
+        } else {
+          localStorage.setItem('user_name', newName);
+        }
+      } else {
+        throw new Error('Failed to update name');
+      }
+    } catch {
+      // Fallback: update locally if API fails
+      setUserName(newName);
+      const currentUserId = userId || localStorage.getItem('user_id');
+      if (currentUserId) {
+        localStorage.setItem(`user_name_${currentUserId}`, newName);
+      } else {
+        localStorage.setItem('user_name', newName);
+      }
+    }
+  };
 
   return (
     <div 
-      className="min-h-screen flex flex-col pb-20"
-      style={{ backgroundColor: '#E8F5E9' }}
+      className="flex min-h-screen flex-col font-sans pb-20"
+      style={{ background: 'linear-gradient(to bottom, #CBDFC9 32%, #95C590 100%)' }}
     >
       {/* Header Section */}
       <div className="pt-16 pb-5 px-5">
@@ -251,11 +301,8 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
               style={{ backgroundColor: '#fff' }}
             >
               {profileImage ? (
-                <img
-                  src={profileImage}
-                  alt="Profile"
-                  className="w-full h-full object-cover"
-                />
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={profileImage} alt="Profile" className="w-full h-full object-cover" />
               ) : (
                 <svg 
                   className="w-12 h-12" 

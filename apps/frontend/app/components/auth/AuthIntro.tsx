@@ -18,12 +18,11 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
       <div className="w-full max-w-md text-center">
         {/* Logo */}
         <div className="mb-8 flex justify-center">
-          <img 
-            src="/PantryPilotLogo.png" 
-            alt="PantryPilot Logo" 
-            className="h-24 w-auto sm:h-32"
-            style={{ filter: 'none' }}
-          />
+          <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-full bg-white/80 shadow-inner flex items-center justify-center">
+            <span className="text-3xl font-semibold tracking-wide" style={{ color: '#2D5016' }}>
+              PP
+            </span>
+          </div>
         </div>
 
         {/* Heading */}

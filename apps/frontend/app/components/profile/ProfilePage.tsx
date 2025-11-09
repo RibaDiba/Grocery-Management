@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import EditNameModal from './EditNameModal';
 import ChangePasswordModal from './ChangePasswordModal';
 
 interface ProfilePageProps {
@@ -38,91 +37,112 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
   const [userId, setUserId] = useState<string | null>(null);
   // Removed unused loading state
   const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
 
   useEffect(() => {
-    // Get user ID first
-    const storedUserId = localStorage.getItem('user_id');
-    let resolvedUserId = storedUserId;
-    
-    if (storedUserId) {
-      setUserId(storedUserId);
-    } else {
-      // Try to get from JWT token
+    const fetchUserProfile = async () => {
       const token = localStorage.getItem('access_token');
-      if (token) {
-        const payload = decodeJWT(token);
-        if (payload && payload.sub) {
-          resolvedUserId = payload.sub;
-          setUserId(payload.sub);
+      if (!token) return;
+
+      try {
+        // Fetch user profile from API to get the actual username from signup
+        const response = await fetch('http://localhost:8000/api/auth/me', {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (response.ok) {
+          const profile = await response.json();
+          setUserId(profile.id);
+          setUserEmail(profile.email);
+          setUserName(profile.username || 'User');
+          
+          // Store in localStorage for consistency
+          localStorage.setItem('user_id', profile.id);
+          localStorage.setItem('user_email', profile.email);
+          localStorage.setItem('username', profile.username || 'User');
+        } else {
+          // Fallback to localStorage/JWT if API fails
+          const storedUserId = localStorage.getItem('user_id');
+          const storedEmail = localStorage.getItem('user_email');
+          const storedUsername = localStorage.getItem('username');
+          
+          if (storedUserId) setUserId(storedUserId);
+          if (storedEmail) setUserEmail(storedEmail);
+          if (storedUsername) {
+            setUserName(storedUsername);
+          } else {
+            // Try to get from JWT token
+            const payload = decodeJWT(token);
+            if (payload) {
+              if (payload.sub) setUserId(payload.sub);
+              if (payload.email) setUserEmail(payload.email);
+              if (payload.username) setUserName(payload.username);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user profile:', error);
+        // Fallback to localStorage/JWT
+        const storedUserId = localStorage.getItem('user_id');
+        const storedEmail = localStorage.getItem('user_email');
+        const storedUsername = localStorage.getItem('username');
+        
+        if (storedUserId) setUserId(storedUserId);
+        if (storedEmail) setUserEmail(storedEmail);
+        if (storedUsername) {
+          setUserName(storedUsername);
+        } else {
+          const token = localStorage.getItem('access_token');
+          if (token) {
+            const payload = decodeJWT(token);
+            if (payload) {
+              if (payload.sub) setUserId(payload.sub);
+              if (payload.email) setUserEmail(payload.email);
+              if (payload.username) setUserName(payload.username);
+            }
+          }
         }
       }
-    }
+    };
 
-    // Get user email from localStorage (stored during sign-in) or JWT token
-    const storedEmail = localStorage.getItem('user_email');
-    if (storedEmail) {
-      setUserEmail(storedEmail);
-    } else {
-      // Fallback: try to get from JWT token
-      const token = localStorage.getItem('access_token');
-      if (token) {
-        const payload = decodeJWT(token);
-        if (payload) {
-          // JWT typically has 'email' or 'sub' (which might be email)
-          const email = payload.email || payload.sub || 'placeholder@email.com';
-          setUserEmail(email);
-        }
-      }
-    }
+    fetchUserProfile();
+  }, []);
 
-    // Use resolvedUserId for all user-specific data operations
-    // Get user name from localStorage using user-specific key or fallback to old key
-    let storedName = null;
-    if (resolvedUserId) {
-      storedName = localStorage.getItem(`user_name_${resolvedUserId}`);
-      // Migration: Check for old key and migrate to user-specific key
-      if (!storedName) {
-        const oldName = localStorage.getItem('user_name');
-        if (oldName) {
-          storedName = oldName;
-          localStorage.setItem(`user_name_${resolvedUserId}`, oldName);
-        }
-      }
-    } else {
-      storedName = localStorage.getItem('user_name');
-    }
-    
-    if (storedName) {
-      setUserName(storedName);
-    } else {
-      const email = storedEmail || localStorage.getItem('user_email') || 'placeholder@email.com';
-      setUserName(email.split('@')[0]);
-    }
-
-    // Load saved profile image using user-specific key
-    if (resolvedUserId) {
-      const savedImage = localStorage.getItem(`profile_image_${resolvedUserId}`);
-      if (savedImage) {
-        setProfileImage(savedImage);
-      } else {
-        // Migration: Check for old key and migrate to user-specific key
-        const oldImage = localStorage.getItem('profile_image');
+  // Load profile image using email as key (persists across logins)
+  useEffect(() => {
+    if (userEmail && userEmail !== 'placeholder@email.com') {
+      // Try email-based key first (new approach)
+      let savedImage = localStorage.getItem(`profile_image_${userEmail}`);
+      
+      // Migration: If not found, check userId-based key and migrate
+      if (!savedImage && userId) {
+        const oldImage = localStorage.getItem(`profile_image_${userId}`);
         if (oldImage) {
-          setProfileImage(oldImage);
-          localStorage.setItem(`profile_image_${resolvedUserId}`, oldImage);
-          // Optionally remove old key after migration
+          savedImage = oldImage;
+          // Migrate to email-based key
+          localStorage.setItem(`profile_image_${userEmail}`, oldImage);
+          // Optionally remove old key
+          localStorage.removeItem(`profile_image_${userId}`);
+        }
+      }
+      
+      // Fallback to old global key
+      if (!savedImage) {
+        const oldGlobalImage = localStorage.getItem('profile_image');
+        if (oldGlobalImage) {
+          savedImage = oldGlobalImage;
+          // Migrate to email-based key
+          localStorage.setItem(`profile_image_${userEmail}`, oldGlobalImage);
           localStorage.removeItem('profile_image');
         }
       }
-    } else {
-      // Fallback to old key for backward compatibility
-      const savedImage = localStorage.getItem('profile_image');
+      
       if (savedImage) {
         setProfileImage(savedImage);
       }
     }
-  }, [userId]);
+  }, [userEmail, userId]);
 
   const handleBack = () => {
     if (onBack) {
@@ -155,12 +175,12 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
       reader.onloadend = () => {
         const result = reader.result as string;
         setProfileImage(result);
-        // Save to localStorage with user-specific key
-        const currentUserId = userId || localStorage.getItem('user_id');
-        if (currentUserId) {
-          localStorage.setItem(`profile_image_${currentUserId}`, result);
+        // Save to localStorage using email as key (persists across logins)
+        const currentEmail = userEmail || localStorage.getItem('user_email');
+        if (currentEmail && currentEmail !== 'placeholder@email.com') {
+          localStorage.setItem(`profile_image_${currentEmail}`, result);
         } else {
-          // Fallback to old key if no user ID
+          // Fallback to old key if no email
           localStorage.setItem('profile_image', result);
         }
       };
@@ -322,7 +342,7 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
             style={{ display: 'none' }}
           />
           
-          {/* User Name with Edit Button */}
+          {/* User Name (read-only, from signup) */}
           <div className="flex items-center gap-2 mb-2">
             <h1 
               className="text-2xl font-bold"
@@ -330,21 +350,6 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
             >
               {userName}
             </h1>
-            <button
-              onClick={() => setShowEditNameModal(true)}
-              className="p-1"
-              aria-label="Edit name"
-            >
-              <svg 
-                className="w-5 h-5" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24"
-                style={{ color: '#2D5016' }}
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
           </div>
           
           {/* Email */}
@@ -576,14 +581,6 @@ export default function ProfilePage({ onBack, onSignOut }: ProfilePageProps) {
       </div>
 
       {/* Modals */}
-      {showEditNameModal && (
-        <EditNameModal
-          currentName={userName}
-          onClose={() => setShowEditNameModal(false)}
-          onSave={handleUpdateName}
-        />
-      )}
-
       {showChangePasswordModal && (
         <ChangePasswordModal
           userEmail={userEmail}

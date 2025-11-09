@@ -1,11 +1,51 @@
 "use client";
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import BottomNav from './BottomNav';
 import { useReceiptUpload } from '../../hooks/useReceiptUpload';
 import SuccessPopup from '../common/SuccessPopup';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
+  const [isSignedIn, setIsSignedIn] = useState(false);
+  
+  useEffect(() => {
+    // Listen for storage changes to sync auth state
+    const handleStorageChange = () => {
+      const token = localStorage.getItem('access_token');
+      setIsSignedIn(!!token);
+    };
+    
+    // Initial check
+    const token = localStorage.getItem('access_token');
+    setIsSignedIn(!!token);
+    
+    // Listen for storage changes
+    window.addEventListener('storage', handleStorageChange);
+    return () => window.removeEventListener('storage', handleStorageChange);
+  }, []);
+  
+  // Also listen for custom auth events from children
+  useEffect(() => {
+    const handleAuthChange = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      setIsSignedIn(customEvent.detail?.isSignedIn ?? false);
+    };
+    
+    window.addEventListener('authStateChange', handleAuthChange);
+    return () => window.removeEventListener('authStateChange', handleAuthChange);
+  }, []);
+  
+  // Poll localStorage periodically as fallback
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const token = localStorage.getItem('access_token');
+      setIsSignedIn(!!token);
+    }, 500);
+    
+    return () => clearInterval(interval);
+  }, []);
+  
+
   const {
     fileInputRef,
     uploading,
@@ -54,12 +94,14 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
         />
       )}
 
-      <BottomNav
-        fileInputRef={fileInputRef}
-        uploading={uploading}
-        onSelectFile={handleFileSelect}
-        onFileChange={handleFileChange}
-      />
+      {isSignedIn && (
+        <BottomNav
+          fileInputRef={fileInputRef}
+          uploading={uploading}
+          onSelectFile={handleFileSelect}
+          onFileChange={handleFileChange}
+        />
+      )}
     </div>
   );
 }

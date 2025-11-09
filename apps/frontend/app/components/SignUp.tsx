@@ -65,11 +65,13 @@ const SignUp = ({ onSignUp }: { onSignUp: (accessToken: string, userId: string) 
             // Decode JWT to get user_id
             const userId = decodeJWT(token);
             
-            // Store token and user_id in localStorage for persistence
+            // Store token, user_id, and email in localStorage for persistence
             localStorage.setItem('access_token', token);
             if (userId) {
               localStorage.setItem('user_id', userId);
             }
+            // Store email for profile display
+            localStorage.setItem('user_email', email);
             
             onSignUp(token, userId || ''); // Pass token and user_id to parent
           } else {

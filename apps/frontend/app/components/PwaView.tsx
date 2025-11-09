@@ -24,43 +24,10 @@ export default function PwaView() {
   const [selectedWeekRange, setSelectedWeekRange] = useState<WeekSelection | null>(null);
 
   useEffect(() => {
-    const token = localStorage.getItem('access_token');
-    if (token) {
-      // Try to get userId from localStorage, or decode from token
-      let userId = localStorage.getItem('user_id');
-      if (!userId) {
-        // Decode JWT to get user_id if not stored
-        try {
-          const base64Url = token.split('.')[1];
-          const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-          const jsonPayload = decodeURIComponent(
-            atob(base64)
-              .split('')
-              .map((c) => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-              .join('')
-          );
-          const payload = JSON.parse(jsonPayload);
-          userId = payload.sub || null;
-          if (userId) {
-            localStorage.setItem('user_id', userId);
-          }
-        } catch (error) {
-          console.error('Error decoding JWT:', error);
-        }
-      }
-      
-      if (userId) {
-        setSignedIn(true);
-        setUserToken(token);
-        setCurrentUserId(userId);
-        // Don't set authView when signed in - user goes directly to app
-      } else {
-        setAuthView('intro'); // Show intro if no valid user
-      }
-    } else {
-      setAuthView('intro'); // Show intro if no token
+    if (!signedIn && authView !== 'intro') {
+      setAuthView('intro');
     }
-  }, []);
+  }, [signedIn, authView]);
 
   const handleSignIn = (accessToken: string, userId: string) => {
     setSignedIn(true);
@@ -75,32 +42,18 @@ export default function PwaView() {
   };
 
   const handleSignOut = () => {
-    // Clear localStorage
     localStorage.removeItem('access_token');
     localStorage.removeItem('user_id');
-    
-    // Reset state
     setSignedIn(false);
     setAuthView('intro');
     setUserToken(null);
     setCurrentUserId(null);
   };
 
-  const handleSignInClick = () => {
-    setAuthView('signin');
-  };
-
-  const handleSignUpClick = () => {
-    setAuthView('signup');
-  };
-
-  const handleBackToIntro = () => {
-    setAuthView('intro');
-  };
-
-  const handleSwitchMode = () => {
-    setAuthView(authView === 'signin' ? 'signup' : 'signin');
-  };
+  const handleSignInClick = () => setAuthView('signin');
+  const handleSignUpClick = () => setAuthView('signup');
+  const handleBackToIntro = () => setAuthView('intro');
+  const handleSwitchMode = () => setAuthView(authView === 'signin' ? 'signup' : 'signin');
 
   const calendarActive = showCalendar;
 
@@ -108,7 +61,6 @@ export default function PwaView() {
     if (authView === 'intro') {
       return <AuthIntro onSignInClick={handleSignInClick} onSignUpClick={handleSignUpClick} />;
     }
-    
     return (
       <AuthForm
         mode={authView === 'signin' ? 'signin' : 'signup'}
@@ -386,6 +338,12 @@ export default function PwaView() {
           </span>
         </button>
       </nav>
+      <CalendarOverlay isOpen={showCalendar} onClose={() => setShowCalendar(false)} token={userToken} />
+
+      <BottomNav 
+        onCalendarClick={() => setShowCalendar(true)}
+        onProfileClick={() => {}}
+      />
     </div>
   );
 }

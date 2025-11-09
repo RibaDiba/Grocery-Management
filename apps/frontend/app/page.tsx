@@ -6,28 +6,36 @@ import MobileView from './components/MobileView';
 import PwaView from './components/PwaView';
 
 export default function Home() {
-  const [view, setView] = useState<'loading' | 'desktop' | 'mobile' | 'pwa'>('loading');
+  const [view, setView] = useState<'loading' | 'desktop' | 'mobile' | 'pwa'>(() => {
+    const isPWA = typeof window !== 'undefined' && window.matchMedia('(display-mode: standalone)').matches;
+    if (isPWA) {
+      return 'pwa';
+    }
+
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+
+    if (isMobile) {
+      return 'mobile';
+    } else {
+      return 'desktop';
+    }
+  });
 
   useEffect(() => {
-    const determineView = () => {
+    const handleResize = () => {
       const isPWA = window.matchMedia('(display-mode: standalone)').matches;
       if (isPWA) {
-        return 'pwa';
+        setView('pwa');
+        return;
       }
 
       const isMobile = window.innerWidth < 768;
 
       if (isMobile) {
-        return 'mobile';
+        setView('mobile');
       } else {
-        return 'desktop';
+        setView('desktop');
       }
-    };
-
-    setView(determineView());
-
-    const handleResize = () => {
-      setView(determineView());
     };
 
     window.addEventListener('resize', handleResize);

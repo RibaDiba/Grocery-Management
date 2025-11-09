@@ -58,3 +58,5 @@ passlib[bcrypt]==1.7.4
 bcrypt==4.0.1
 pymongo==4.8.0
 pydantic[email]
+mongomock==4.1.2
+pytest==8.3.3

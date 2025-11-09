@@ -10,12 +10,15 @@ from receipt_parser import ReceiptParser
 from auth import router as auth_router, get_current_user, User
 from groceries import router as groceries_router
 from receipts import router as receipts_router
+from pydantic import BaseModel
+import re
 
 
 app = FastAPI(title="grocery-backend")
 app.include_router(auth_router)
 app.include_router(groceries_router)
 app.include_router(receipts_router)
+    
 # Dynamically import recipes router to avoid static import path issues
 try:
     import importlib
@@ -59,9 +62,10 @@ async def root():
         "version": "1.0.0",
         "endpoints": {
             "upload": "/api/receipt/upload",
+            "analyze_text": "/api/receipt/analyze-text",
             "health": "/health",
-            "docs": "/docs"
-        }
+            "docs": "/docs",
+        },
     }
 
 
@@ -136,6 +140,115 @@ async def upload_receipt(file: UploadFile = File(...), current_user: User = Depe
     }
     
     return JSONResponse(content=response_data)
+
+
+class AnalyzeTextRequest(BaseModel):
+    text: str
+
+
+@app.post("/api/receipt/analyze-text")
+async def analyze_text(body: AnalyzeTextRequest, current_user: User = Depends(get_current_user)) -> JSONResponse:
+    """
+    Accepts multi-line text input with one grocery per line, optionally including a count.
+    Examples of accepted line formats:
+      - "Apples x 3"
+      - "3 Apples"
+      - "Milk - 2"
+      - "Bread: 1"
+      - "Yogurt, 4"
+      - "Banana 5"
+
+    If no count is present, defaults to 1. Empty or invalid lines are ignored.
+    """
+    start_time = time.time()
+    text = (body.text or "").strip()
+    if not text:
+        raise HTTPException(status_code=400, detail="Text is required")
+
+    # Parse user-provided lines into items with name + count
+    lines = [l.strip() for l in text.splitlines() if l.strip()]
+    items: list[dict[str, Any]] = []
+
+    # Helper to clean bullet prefixes like '-', '*', '•', or '1. '
+    bullet_re = re.compile(r"^(?:[-*•]\s+|\d+\.|\d+\)\s+)")
+    # Patterns: leading count or trailing count with separators
+    lead_count_re = re.compile(r"^(?P<count>\d+)\s*(?:x|×)?\s*(?P<name>.+)$", re.IGNORECASE)
+    trail_count_re = re.compile(r"^(?P<name>.+?)\s*(?:x|×|:|,|-)?\s*(?P<count>\d+)\s*$", re.IGNORECASE)
+
+    for raw in lines:
+        line = bullet_re.sub("", raw).strip()
+        if not line:
+            continue
+
+        name = None
+        count = None
+
+        m = lead_count_re.match(line)
+        if m:
+            try:
+                count = int(m.group("count"))
+            except ValueError:
+                count = 1
+            name = m.group("name").strip()
+        else:
+            m2 = trail_count_re.match(line)
+            if m2:
+                name = m2.group("name").strip()
+                try:
+                    count = int(m2.group("count"))
+                except ValueError:
+                    count = 1
+            else:
+                # No explicit count; entire line is the name
+                name = line
+                count = 1
+
+        if not name:
+            continue
+        if count is None or count <= 0:
+            count = 1
+
+        # Normalize whitespace and trim quotes
+        norm_name = name.strip().strip('"\'')
+        if not norm_name:
+            continue
+        items.append({"name": norm_name, "count": count})
+
+    # Persist groceries using existing upsert logic (now supports per-item count)
+    grocery_item_ids: list[str] = []
+    try:
+        receipt_parser = ReceiptParser(user_id=current_user.id)
+        grocery_item_ids = receipt_parser.add_groceries_to_db(items)
+    except Exception as e:
+        print(f"Warning: failed to persist groceries (text analysis): {e}")
+
+    # Persist a receipt document noting it's from text input
+    try:
+        from database import get_receipts_collection
+        from models import Receipt
+        receipts_col = get_receipts_collection()
+        synthetic_path = f"text://{int(time.time() * 1000)}"
+        receipt = Receipt(
+            user_id=current_user.id,
+            file_path=synthetic_path,
+            raw_text=text,
+            grocery_items=grocery_item_ids,
+        )
+        receipts_col.insert_one(receipt.dict())
+    except Exception as e:
+        print(f"Warning: failed to persist receipt doc (text analysis): {e}")
+
+    processing_time_ms = int((time.time() - start_time) * 1000)
+    total_units = sum(i.get("count", 1) for i in items)
+    return JSONResponse(
+        content={
+            "success": True,
+            "items": items,
+            "total_items": total_units,
+            "raw_text": text,
+            "processing_time_ms": processing_time_ms,
+        }
+    )
 
 
 def validate_file(file: UploadFile) -> None:

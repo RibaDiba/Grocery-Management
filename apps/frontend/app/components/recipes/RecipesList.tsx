@@ -9,9 +9,9 @@ export default function RecipesList() {
   ];
 
   return (
-    <div className="mt-6 w-full">
+    <div className="mt-4 w-full">
       <div 
-        className="rounded-lg p-3"
+        className="rounded-lg p-2.5"
         style={{
           backgroundColor: '#E8F5E9',
           boxShadow: '0px 4px 6px rgba(0, 0, 0, 0.1)'
@@ -47,11 +47,11 @@ export default function RecipesList() {
         </div>
 
         {/* Recipe Cards */}
-        <div className="space-y-2">
+        <div className="space-y-1.5">
           {recipes.map((recipe) => (
             <div
               key={recipe.id}
-              className="rounded-lg bg-white p-2.5 flex items-center gap-2.5"
+              className="rounded-lg bg-white p-2 flex items-center gap-2"
             >
               {/* Image Placeholder */}
               <div 

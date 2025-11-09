@@ -84,7 +84,14 @@ const SignUp = ({ onSignUp }: { onSignUp: (accessToken: string, userId: string) 
         }
       } else {
         const errorData = await response.json();
-        setError(typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData) || 'Registration failed.');
+        const errorDetail = typeof errorData.detail === 'string' ? errorData.detail : JSON.stringify(errorData) || 'Registration failed.';
+        
+        // Check if email already exists and show helpful message
+        if (errorDetail.toLowerCase().includes('email already registered') || errorDetail.toLowerCase().includes('email already')) {
+          setError('This email is already registered. Please sign in instead.');
+        } else {
+          setError(errorDetail);
+        }
       }
     } catch (err) { // eslint-disable-line @typescript-eslint/no-unused-vars
       setError('Network error or server is unreachable.');

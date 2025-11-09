@@ -30,7 +30,7 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
           className="mb-4 text-5xl font-bold sm:text-6xl"
           style={{ color: '#2D5016' }}
         >
-          Hello
+          SaveRe
         </h1>
 
         {/* Shortened Message */}
@@ -38,7 +38,7 @@ export default function AuthIntro({ onSignInClick, onSignUpClick }: AuthIntroPro
           className="mb-12 text-lg leading-relaxed sm:text-xl"
           style={{ color: '#4A614F' }}
         >
-          Prevent food waste by tracking your groceries and getting notified when items are about to expire.
+          Track groceries. Help prevent food waste.  
         </p>
         
         {/* Buttons with Different Colors */}

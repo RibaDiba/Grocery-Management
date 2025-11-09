@@ -8,9 +8,10 @@ interface BottomNavProps {
   uploading: boolean;
   onSelectFile: () => void;
   onFileChange: (e: ChangeEvent<HTMLInputElement>) => void;
+  onOpenManualInput: () => void;
 }
 
-export default function BottomNav({ fileInputRef, uploading, onSelectFile, onFileChange }: BottomNavProps) {
+export default function BottomNav({ fileInputRef, uploading, onSelectFile, onFileChange, onOpenManualInput }: BottomNavProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [fabOpen, setFabOpen] = useState(false);
@@ -35,7 +36,10 @@ export default function BottomNav({ fileInputRef, uploading, onSelectFile, onFil
       <div className="fixed left-1/2 transform -translate-x-1/2 bottom-12 z-[70] flex flex-col items-center">
         <div className={`flex flex-col items-center transition-all duration-300 ease-in-out ${fabOpen ? 'opacity-100 translate-y-0 mb-4' : 'opacity-0 translate-y-4 pointer-events-none mb-0'}`}>
           <button
-            onClick={() => setFabOpen(false)}
+            onClick={() => {
+              onOpenManualInput();
+              setFabOpen(false);
+            }}
             className="w-12 h-12 rounded-full bg-white flex items-center justify-center"
             style={{ boxShadow: '0px 8px 15px rgba(0, 0, 0, 0.2)' }}
             aria-label="Add manually"

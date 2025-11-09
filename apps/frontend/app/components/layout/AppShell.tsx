@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+// Import manual input overlay (alias path fallback for resolution issues)
+import ManualGroceriesInput from '@/app/components/manual/ManualGroceriesInput';
 import BottomNav from './BottomNav';
 import { useReceiptUpload } from '../../hooks/useReceiptUpload';
 import SuccessPopup from '../common/SuccessPopup';
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const [isSignedIn, setIsSignedIn] = useState(false);
+  const [showManualInput, setShowManualInput] = useState(false);
   
   useEffect(() => {
     // Listen for storage changes to sync auth state
@@ -16,8 +19,9 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     };
     
     // Initial check
-    const token = localStorage.getItem('access_token');
-    setIsSignedIn(!!token);
+  const token = localStorage.getItem('access_token');
+  // Defer to next tick to avoid synchronous setState warning inside effect body
+  setTimeout(() => setIsSignedIn(!!token), 0);
     
     // Listen for storage changes
     window.addEventListener('storage', handleStorageChange);
@@ -60,6 +64,21 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen">
       {children}
 
+      {showManualInput && (
+        <div
+          className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center"
+          style={{ backgroundColor: 'rgba(0,0,0,0.3)' }}
+          onClick={() => setShowManualInput(false)}
+        >
+          <div
+            className="w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-4 sm:p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <ManualGroceriesInput onClose={() => setShowManualInput(false)} />
+          </div>
+        </div>
+      )}
+
       {uploadError && (
         <div
           className="fixed bottom-36 left-4 right-4 bg-red-50 border border-red-300 rounded-xl p-4 z-[60] shadow-lg"
@@ -100,6 +119,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           uploading={uploading}
           onSelectFile={handleFileSelect}
           onFileChange={handleFileChange}
+          onOpenManualInput={() => setShowManualInput(true)}
         />
       )}
     </div>
